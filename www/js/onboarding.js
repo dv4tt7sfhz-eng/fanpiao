@@ -117,6 +117,7 @@ export function Onboarding() {
       <div class="tile"><div class="v num">${T.fat} g</div><div class="l">脂肪</div></div>
     </div><p class="small muted" style="margin:10px 0 0">进去以后可以再调。</p></div>` : null}
     ${err ? html`<div class="note bad" role="alert">${err}</div>` : null}
+    ${step === 0 ? html`<button class="note tap" id="ob-ai" onClick=${() => UI.open({ t: "aiimport" })}>不想一项项填？让 AI 帮你填 ›<br /><small class="muted" style="font-weight:400">复制一段说明给任何 AI，它问你几个问题，写好资料和常吃的东西，粘贴回来就行</small></button>` : null}
     <div class="row">
       ${step > 0 ? html`<button class="btn" onClick=${() => { setStep(step - 1); setErr(""); }}>上一步</button>` : null}
       <button class="btn primary grow" id="ob-next" onClick=${step < 2 ? next : finish}>${step < 2 ? "下一步" : "开始用"}</button>

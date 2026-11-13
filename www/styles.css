@@ -1134,3 +1134,11 @@ button,label.switch,.chip,.nav,.lrow .main,[role="button"]{touch-action:manipula
 .ptable .pr span:nth-child(3){font-weight:800;color:var(--ink2)}
 .ptable .pr span:nth-child(3) em{margin-left:2px}
 @media (prefers-reduced-motion:reduce){.packcard,.ptable .pr,.pshots img{animation:none}}
+
+/* ---------- 1.7.0 让 AI 帮你填 ---------- */
+.nav .ic.i-fill{background:linear-gradient(140deg,#ff9f0a,#ff375f)}
+#ob-ai{margin-top:2px}
+#ob-ai small{display:block;margin-top:3px;font-size:13.5px;line-height:1.45;color:var(--ink2)}
+#aiim-warns div+div{margin-top:6px}
+#aiim-preview .kv b{max-width:62%;overflow-wrap:anywhere}
+#aiim-preview .kv:last-of-type{border-bottom:0}

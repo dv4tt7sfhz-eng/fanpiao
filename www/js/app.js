@@ -10,6 +10,7 @@ import { attachTabDrag } from "./tabdrag.js";
 import { NaFbSheet } from "./nafb.js";
 import { Me, ProfileSheet, AISetSheet, CloudSheet, DataSheet, AboutSheet } from "./me.js";
 import { detectPreview } from "./ai.js";
+import { AIImportSheet, fromLink } from "./aiimport.js";
 import { haptic, fullFx, installRipple } from "./fx.js";
 import { Splash, Calc, AIThinking, Wipe, Celebrate } from "./fullscreen.js";
 
@@ -21,7 +22,7 @@ const TABS = [
 ];
 const TITLE = { today: "今天", foods: "食物", records: "记录", me: "我的" };
 const SHEETS = { target: TargetSheet, mode: ModeSheet, item: ItemSheet, pick: PickSheet, ai: AISheet, food: FoodSheet, shop: ShopSheet, snap: SnapSheet, nafb: NaFbSheet,
-  profile: ProfileSheet, aiset: AISetSheet, cloud: CloudSheet, data: DataSheet, about: AboutSheet };
+  profile: ProfileSheet, aiset: AISetSheet, cloud: CloudSheet, data: DataSheet, about: AboutSheet, aiimport: AIImportSheet };
 const FSC = { splash: Splash, calc: Calc, ai: AIThinking, wipe: Wipe, cele: Celebrate };
 const root = document.documentElement;
 installRipple();
@@ -91,10 +92,13 @@ function App() {
 
   const FS = fs && FSC[fs.t];
   const fsNode = FS ? html`<${FS} key=${fs.k} ...${fs} onReveal=${() => { setFromFs(true); setReady(true); }} onDone=${() => setFs(null)} />` : null;
-  if (!app.S.profile) return html`<div class="page"><div class="view" key="ob"><${Onboarding} /></div></div>${fsNode}`;
+  const SheetC = sheet && SHEETS[sheet.t];
+  const sheetNode = SheetC ? html`<${SheetC} ...${sheet} onClose=${closeSheet} />` : null;
+  const toastNode = toast ? html`<div class="toast" role="status" key=${toast.k}>${toast.t}</div>` : null;
+  // 还没建档时也能打开「让 AI 帮你填」
+  if (!app.S.profile) return html`<div class="page"><div class="view" key="ob"><${Onboarding} /></div></div>${sheetNode}${toastNode}${fsNode}`;
   if (!ready) return html`<div class="page"></div>${fsNode}`;
   const View = { today: Today, foods: FoodsView, records: Records, me: Me }[tab];
-  const SheetC = sheet && SHEETS[sheet.t];
   const idx = TABS.findIndex((t) => t.id === tab);
   return html`
     <div class="navglass" aria-hidden="true"><b>${TITLE[tab]}</b></div>
@@ -106,8 +110,8 @@ function App() {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d=${t.d} /></svg><span>${t.n}</span></button>`)}
       <i class="lgrim" aria-hidden="true"></i>
     </div></nav>
-    ${SheetC ? html`<${SheetC} ...${sheet} onClose=${closeSheet} />` : null}
-    ${toast ? html`<div class="toast" role="status" key=${toast.k}>${toast.t}</div>` : null}
+    ${sheetNode}
+    ${toastNode}
     ${fsNode}`;
 }
 
@@ -115,8 +119,26 @@ const mount = document.getElementById("app");
 mount.textContent = "";
 render(html`<${App} />`, mount);
 
+// 别的程序或 AI 可以用 fanpiao://import?data=… 打开「让 AI 帮你填」。只会打开预览，用户确认后才写入。
+function openImport(url) {
+  let t = null;
+  try { t = fromLink(url); } catch (e) { setTimeout(() => UI.toast("链接里的数据读不出来，可能复制得不完整"), 50); return; }
+  if (t) setTimeout(() => UI.open({ t: "aiimport", text: t, key: Date.now() }), 50);
+}
+function checkHash() {
+  if (!location.hash.startsWith("#ai-import=")) return;
+  openImport(location.hash);
+  try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+}
+checkHash();
+window.addEventListener("hashchange", checkHash);
+
 // 安卓的返回键：先关面板，再回「今天」，最后才退出
 try {
   const cap = window.Capacitor;
-  if (cap && cap.Plugins && cap.Plugins.App) cap.Plugins.App.addListener("backButton", () => { if (!UI.back()) cap.Plugins.App.exitApp(); });
+  if (cap && cap.Plugins && cap.Plugins.App) {
+    cap.Plugins.App.addListener("backButton", () => { if (!UI.back()) cap.Plugins.App.exitApp(); });
+    cap.Plugins.App.addListener("appUrlOpen", (e) => openImport(e && e.url));
+    cap.Plugins.App.getLaunchUrl().then((r) => r && r.url && openImport(r.url)).catch(() => {});
+  }
 } catch (e) {}

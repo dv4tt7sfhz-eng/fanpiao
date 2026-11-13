@@ -6,7 +6,7 @@ import { PROVIDERS, providerOf, chatJSON, hasPreviewAI, aiReady } from "./ai.js"
 import { cloud, exportable } from "./api.js";
 import { blank, wipe, save } from "./store.js";
 
-export const VERSION = "1.6.1";
+export const VERSION = "1.7.0";
 
 export function Me() {
   const S = app.S, p = S.profile, T = targetsOf(p);
@@ -26,6 +26,7 @@ export function Me() {
     </div>
     <div class="card" style="padding-block:4px">
       <button class="nav" id="nav-ai" onClick=${() => UI.open({ t: "aiset" })}><span class="ic i-ai" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /></svg></span><b>AI 设置</b><span>${aiState} ›</span></button>
+      <button class="nav" id="nav-aiimport" onClick=${() => UI.open({ t: "aiimport" })}><span class="ic i-fill" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19l9.5-9.5M14.5 9.5l2-2a1.4 1.4 0 0 1 2 2l-2 2M17 3v2M21 7h-2M19.5 4.5 18 6M9 4l.6 1.6L11 6l-1.4.4L9 8l-.6-1.6L7 6l1.4-.4z" /></svg></span><b>让 AI 帮你填</b><span>任何 AI 都行 ›</span></button>
       <button class="nav" id="nav-cloud" onClick=${() => UI.open({ t: "cloud" })}><span class="ic i-cloud" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 18h10.5a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 7.3 9.6 4.2 4.2 0 0 0 7 18z" /></svg></span><b>云端账号和备份</b><span>${S.cloud.token ? "已登录 " + S.cloud.user : "预留功能，未连接"} ›</span></button>
       <button class="nav" id="nav-data" onClick=${() => UI.open({ t: "data" })}><span class="ic i-data" aria-hidden="true"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.6" /><path d="M5 6v6c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6V6M5 12v6c0 1.4 3.1 2.6 7 2.6s7-1.2 7-2.6v-6" /></svg></span><b>导出、导入、清空数据</b><span>›</span></button>
       <button class="nav" id="nav-about" onClick=${() => UI.open({ t: "about" })}><span class="ic i-about" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5.5c0 4.3-3 7.8-7 9.5-4-1.7-7-5.2-7-9.5V6z" /><path d="M9 12l2.2 2.2L15.5 10" /></svg></span><b>隐私说明和免责声明</b><span>›</span></button>
@@ -237,9 +238,10 @@ export function AboutSheet({ onClose }) {
       <p>你的身高、体重、目标、食物和每天的记录，都只保存在这台设备上。饭票没有自己的服务器在收集这些数据，也没有广告和统计代码。</p>
       <p>卸载 App 或清除 App 数据后，这些数据会一起删除。需要保留请先在「导出」里备份。</p>
       <h3>什么时候数据会离开这台设备</h3>
-      <p>只有两种情况，而且都是你自己打开的：</p>
+      <p>只有三种情况，而且都是你自己打开的：</p>
       <p>一、使用「AI 排餐」或「让 AI 估营养」时，会把你的性别、年龄、身高、体重、目标、预算和勾选的食物，发给你自己选的模型服务商（例如 DeepSeek）。他们怎么处理这些数据，以他们的隐私政策为准。</p>
       <p>二、在「云端账号和备份」里填了服务器地址并登录后，点「备份到服务器」会把数据上传到那台服务器。</p>
+      <p>三、在「让 AI 帮你填」里，打开「附上我现在的设置」再复制说明时，你的资料和食物会在复制的文字里，由你自己粘贴给别的 AI；用「让饭票里的 AI 写」时，会把你写的那段话和你的设置发给你选的模型服务商。</p>
       <h3>AI 密钥</h3>
       <p>你填的 AI 密钥只保存在这台设备上，只会发给你选的那家服务商。备份和导出里都不包含密钥。</p>
       <h3>免责声明</h3>

@@ -38,7 +38,7 @@ export function FoodsView() {
     <div class="card"><div class="list">
       ${list.map((f) => html`<div class="lrow" key=${f.id}>
         <button class="main" onClick=${() => UI.open({ t: "food", id: f.id })}>
-          <b>${f.n} ${f.custom ? html`<span class="tag">${f.pack ? "营养表" : f.snap ? "拍照加的" : "自己加的"}</span>` : null}${(f.na || 0) >= 600 ? html` <span class="tag na">高钠</span>` : null}${(f.fb || 0) >= 4 ? html` <span class="tag fb">高纤维</span>` : null}</b>
+          <b>${f.n} ${f.custom ? html`<span class="tag">${f.pack ? "营养表" : f.snap ? "拍照加的" : f.ai ? "AI 加的" : "自己加的"}</span>` : null}${(f.na || 0) >= 600 ? html` <span class="tag na">高钠</span>` : null}${(f.fb || 0) >= 4 ? html` <span class="tag fb">高纤维</span>` : null}</b>
           <span class="num">每${f.u}：${r0(f.k)} 千卡　蛋白 ${f.p}g　¥${yuan(f.$)}　${f.out ? "外食" : CK_LABEL[f.ck]}</span>
         </button>
         <button class="tog" aria-label=${"勾选 " + f.n} aria-pressed=${String(!!f.on)} onClick=${() => toggle(f)}></button>

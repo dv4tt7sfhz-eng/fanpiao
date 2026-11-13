@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://fanpiao.app/schema/fanpiao-ai-1.json",
+  "title": "饭票 AI 导入数据 fanpiao.ai/1",
+  "description": "任何 AI 或程序按这个格式写出数据，粘贴进饭票（我的 → 让 AI 帮你填），或用 fanpiao://import?data=<base64url> 链接打开。饭票会先预览，用户确认后才写入。所有字段都可以省略；还没建档的用户必须给 profile 的 sex、age、height、weight。",
+  "type": "object",
+  "properties": {
+    "format": { "const": "fanpiao.ai/1" },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "sex": { "enum": ["m", "f"], "description": "m 男 / f 女" },
+        "age": { "type": "integer", "minimum": 14, "maximum": 90 },
+        "height": { "type": "number", "minimum": 120, "maximum": 220, "description": "厘米" },
+        "weight": { "type": "number", "minimum": 30, "maximum": 250, "description": "公斤" },
+        "goal": { "enum": ["gain", "cut", "keep"], "description": "增肌 / 减脂 / 保持。未满 18 岁的 cut 会改成 keep" },
+        "activity": { "enum": [1.2, 1.375, 1.55, 1.725], "description": "几乎不动 / 每周运动 1–3 次 / 3–5 次 / 6–7 次或体力工作" },
+        "proteinPerKg": { "type": ["number", "null"], "minimum": 0.8, "maximum": 2.5, "description": "每公斤体重吃多少克蛋白。null 或 0 = 按目标默认" },
+        "kcalOverride": { "type": ["number", "null"], "maximum": 6000, "description": "自己定每天热量（男 ≥1500，女 ≥1200）。null 或 0 = 自动算" },
+        "restKcal": { "type": ["number", "null"], "minimum": 800, "maximum": 4000, "description": "手表上的静息千卡。null 或 0 = 用公式估" }
+      },
+      "additionalProperties": false
+    },
+    "prefs": {
+      "type": "object",
+      "properties": {
+        "budget": { "type": "number", "minimum": 0, "maximum": 1000, "description": "每天吃饭预算（元），0 = 不限" },
+        "snack": { "type": "boolean", "description": "要不要加餐" },
+        "modes": {
+          "type": "object",
+          "description": "b 早饭 / l 午饭 / d 晚饭",
+          "properties": {
+            "b": { "$ref": "#/definitions/mode" },
+            "l": { "$ref": "#/definitions/mode" },
+            "d": { "$ref": "#/definitions/mode" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "foods": {
+      "type": "object",
+      "properties": {
+        "enable": { "type": "array", "items": { "type": "string" }, "maxItems": 200, "description": "打开（勾上）的食物：内置 id，或者已有食物的名称" },
+        "disable": { "type": "array", "items": { "type": "string" }, "maxItems": 200, "description": "关掉的食物" },
+        "only": { "type": "boolean", "description": "true = 除了 enable 和 add 里的，其他全部关掉" },
+        "add": { "type": "array", "items": { "$ref": "#/definitions/food" }, "maxItems": 80, "description": "新加的食物。名称和已有食物相同时会更新它" },
+        "price": { "type": "object", "additionalProperties": { "type": "number", "minimum": 0, "maximum": 500 }, "description": "改价格：{\"id 或名称\": 元}" }
+      },
+      "additionalProperties": false
+    },
+    "weights": {
+      "type": "array",
+      "maxItems": 400,
+      "items": {
+        "type": "object",
+        "properties": {
+          "d": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "description": "日期，省略 = 今天；不能是将来" },
+          "kg": { "type": "number", "minimum": 30, "maximum": 250 }
+        },
+        "required": ["kg"]
+      }
+    },
+    "today": {
+      "type": "object",
+      "properties": {
+        "activeKcal": { "type": "number", "minimum": 0, "maximum": 5000, "description": "今天手表上的活动千卡" },
+        "modes": { "type": "object", "properties": { "b": { "$ref": "#/definitions/mode" }, "l": { "$ref": "#/definitions/mode" }, "d": { "$ref": "#/definitions/mode" } } }
+      },
+      "additionalProperties": false
+    },
+    "plan": {
+      "description": "某一天（或最多 7 天）的饭。只收今天前后 7 天以内。已经打勾的会保留",
+      "oneOf": [{ "$ref": "#/definitions/plan" }, { "type": "array", "items": { "$ref": "#/definitions/plan" }, "maxItems": 7 }]
+    },
+    "note": { "type": "string", "maxLength": 300, "description": "给用户的一两句话，显示在导入预览里" }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "mode": { "enum": ["out", "cold", "cook"], "description": "out 食堂或外面买 / cold 不开火 / cook 自己做" },
+    "food": {
+      "type": "object",
+      "description": "营养都是「每 1 个单位」的值",
+      "properties": {
+        "n": { "type": "string", "maxLength": 24, "description": "名称" },
+        "u": { "type": "string", "maxLength": 16, "description": "单位，如 勺(30g)、碗(300g)" },
+        "c": { "enum": ["主食", "肉蛋水产", "奶和豆", "蔬菜", "水果", "坚果", "速食", "补剂", "食堂外食"] },
+        "r": { "enum": ["staple", "protein", "dairy", "veg", "fruit", "fat", "meal"], "description": "主食 / 蛋白 / 奶和豆浆 / 蔬菜 / 水果 / 坚果油脂 / 一整份饭" },
+        "k": { "type": "number", "minimum": 0, "maximum": 3000, "description": "千卡" },
+        "p": { "type": "number", "minimum": 0, "maximum": 300, "description": "蛋白 g" },
+        "f": { "type": "number", "minimum": 0, "maximum": 300, "description": "脂肪 g" },
+        "cb": { "type": "number", "minimum": 0, "maximum": 300, "description": "碳水 g" },
+        "na": { "type": "number", "minimum": 0, "maximum": 20000, "description": "钠 mg" },
+        "fb": { "type": "number", "minimum": 0, "maximum": 100, "description": "膳食纤维 g" },
+        "price": { "type": "number", "minimum": 0, "maximum": 500, "description": "1 个单位多少元" },
+        "ck": { "enum": [0, 1, 2], "description": "0 即食 / 1 要热水 / 2 要开火" },
+        "s": { "type": "string", "pattern": "^[blds]+$", "description": "适合哪几餐：b 早 l 午 d 晚 s 加餐" },
+        "mx": { "type": "number", "minimum": 0.25, "maximum": 20, "description": "一天最多几个单位" },
+        "st": { "enum": [0.25, 0.5, 1], "description": "每次加减多少个单位" },
+        "v": { "type": "number", "minimum": 0, "maximum": 1000, "description": "算多少克蔬菜（只有蔬菜写）" },
+        "out": { "type": "boolean", "description": "是不是食堂或外面买的" },
+        "on": { "type": "boolean", "description": "默认 true" }
+      },
+      "required": ["n", "k", "p", "f", "cb"]
+    },
+    "plan": {
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "meals": {
+          "type": "object",
+          "properties": {
+            "b": { "$ref": "#/definitions/items" },
+            "l": { "$ref": "#/definitions/items" },
+            "d": { "$ref": "#/definitions/items" },
+            "s": { "$ref": "#/definitions/items" }
+          }
+        },
+        "modes": { "type": "object" },
+        "tip": { "type": "string", "maxLength": 200 }
+      },
+      "required": ["meals"]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "description": "内置 id，或 foods.add 里的名称" },
+          "qty": { "type": "number", "exclusiveMinimum": 0 }
+        },
+        "required": ["id"]
+      }
+    }
+  }
+}
