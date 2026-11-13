@@ -2,7 +2,7 @@
 
 按预算、按热量，把每天的健身餐排好的 App。面向所有健身的人：增肌、减脂、保持都能用。
 
-版本 1.7.0 · 安卓包名 `com.fanpiao.app`
+版本 1.7.1 · 安卓包名 `com.fanpiao.app`
 
 ---
 
@@ -10,7 +10,7 @@
 
 | 文件 / 文件夹 | 是什么 |
 |---|---|
-| `饭票-1.7.0.apk` | 安卓安装包，已签名，可以直接装 |
+| `饭票-1.7.1.apk` | 安卓安装包，已签名，可以直接装 |
 | `www/` | App 的全部界面和逻辑（网页技术写的，安卓和苹果共用这一份） |
 | `android/` | 安卓工程，用来重新打包 apk |
 | `ios/` | 苹果 Xcode 工程，用来在苹果电脑上打包 ipa |
@@ -134,7 +134,7 @@
 
 ## 三、安卓手机怎么装
 
-1. 把 `饭票-1.7.0.apk` 发到安卓手机上（微信、QQ、数据线都行）。
+1. 把 `饭票-1.7.1.apk` 发到安卓手机上（微信、QQ、数据线都行）。
 2. 在手机上点开这个文件。
 3. 手机会提示"不允许安装未知来源的应用"。按提示去设置里允许，再点安装。
 4. 装好后桌面上会出现绿色的"饭票"图标。
@@ -305,13 +305,15 @@ node server/test.mjs
 
 ```bash
 npm install
-npx cap sync
+npm run sync
 cd android && ./gradlew assembleRelease
 ```
 
+`npm run sync` 会先把 `www/` 打包成 `dist/`（所有代码合成一个文件、变量名换成乱码、界面文字编码藏起来），再拷进安卓和苹果工程。**自己改代码永远改 `www/`**，`dist/` 每次都会重新生成，别改它。打乱后别人解开安装包很难看懂、也很难照抄；但装在别人手机上的程序没法做到绝对破解不了。
+
 新的 apk 在 `android/app/build/outputs/apk/release/`。
 
-- 改 App 名字：`capacitor.config.json` 里的 `appName`，改完 `npx cap sync`。
+- 改 App 名字：`capacitor.config.json` 里的 `appName`，改完 `npm run sync`。
 - 改包名：`capacitor.config.json` 里的 `appId`，还有 `android/app/build.gradle` 里的 `applicationId` 和 `namespace`。**上架后就不能再改了。**
 - 改图标：换掉 `assets/` 里的图，运行 `npx capacitor-assets generate`。
 - 出新版本：`android/app/build.gradle` 里 `versionCode` 加 1，`versionName` 改成新版本号。

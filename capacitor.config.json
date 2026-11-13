@@ -1,7 +1,7 @@
 {
   "appId": "com.fanpiao.app",
   "appName": "饭票",
-  "webDir": "www",
+  "webDir": "dist",
   "backgroundColor": "#f2f2f7",
   "plugins": {
     "CapacitorHttp": { "enabled": true },
