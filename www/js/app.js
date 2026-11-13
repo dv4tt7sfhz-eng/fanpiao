@@ -6,6 +6,7 @@ import { FoodsView, FoodSheet, ShopSheet } from "./foodsview.js";
 import { Records } from "./records.js";
 import { SnapSheet } from "./snap.js";
 import { liquidify } from "./liquid.js";
+import { attachTabDrag } from "./tabdrag.js";
 import { NaFbSheet } from "./nafb.js";
 import { Me, ProfileSheet, AISetSheet, CloudSheet, DataSheet, AboutSheet } from "./me.js";
 import { detectPreview } from "./ai.js";
@@ -32,7 +33,16 @@ function App() {
   const [toast, setToast] = useState(null);
   // 底部标签栏的液态玻璃折射（只在 Chrome 内核上生效）
   const glassRef = useRef(null);
-  useEffect(() => { const el = glassRef.current; if (el && !el.__lg) { el.__lg = liquidify(el, { id: "lg-tabs", radius: 32, band: 20, scale: 42 }); } });
+  const goRef = useRef(null);
+  useEffect(() => {
+    const el = glassRef.current; if (!el) return;
+    if (!el.__lg) el.__lg = liquidify(el, { id: "lg-tabs", radius: 32, band: 20, scale: 42 });
+    // 按住标签栏会鼓出一个透明泡泡，可以左右滑着选
+    if (!el.__drag) {
+      el.__drag = attachTabDrag(el, { count: TABS.length, onPick: (n) => goRef.current(TABS[n].id), tick: () => haptic(4) });
+      el.__lens = liquidify(el, { id: "lg-bubble", sel: ".bubble", backdrop: true, radius: 27, band: 10, scale: 12, cls: "lens-on" });
+    }
+  });
   // 全屏动画：开场问候在每次打开时播一次
   const [fs, setFs] = useState(() => (app.S.profile && fullFx(app.S) ? { t: "splash", k: 1 } : null));
   const [ready, setReady] = useState(!fs);
@@ -62,7 +72,7 @@ function App() {
   };
   // 先播完退场，再拿掉
   UI.fsOut = () => { setFs((f) => (f ? { ...f, closing: true } : f)); clearTimeout(fsTimer.current); fsTimer.current = setTimeout(() => setFs(null), 480); };
-  UI.open = openSheet; UI.close = closeSheet; UI.go = go;
+  UI.open = openSheet; UI.close = closeSheet; UI.go = go; goRef.current = go;
   UI.toast = (t) => { setToast({ t, k: Date.now() }); clearTimeout(UI._t); UI._t = setTimeout(() => setToast(null), 2600); };
   UI.back = () => { if (fs) { if (fs.t === "cele") setFs(null); return true; } if (sheet) { closeSheet(); return true; } if (tab !== "today") { setTab("today"); return true; } return false; };
 
@@ -89,10 +99,10 @@ function App() {
   return html`
     <div class="navglass" aria-hidden="true"><b>${TITLE[tab]}</b></div>
     <div class="page"><div class=${"view dir-" + dir + (fromFs ? " from-fs" : "")} key=${tab}><${View} /></div></div>
-    <nav class="tabs" aria-label="主导航"><div class="in" ref=${glassRef}>
+    <nav class="tabs" aria-label="主导航"><div class="in" ref=${glassRef} data-idx=${idx}>
       <i class="lgwarp" aria-hidden="true"></i>
-      <i class="thumb" style=${`transform:translateX(${idx * 100}%)`}><i class="blob" key=${"t" + idx}></i></i>
-      ${TABS.map((t) => html`<button id=${"tab-" + t.id} aria-current=${tab === t.id ? "page" : undefined} onClick=${() => go(t.id)}>
+      <i class="thumb" style=${`transform:translateX(${idx * 100}%)`}><i class="pill" key=${"t" + idx}></i><i class="bubble" aria-hidden="true"></i></i>
+      ${TABS.map((t) => html`<button id=${"tab-" + t.id} aria-current=${tab === t.id ? "page" : undefined} onClick=${(e) => { if (e.detail === 0) go(t.id); }}>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d=${t.d} /></svg><span>${t.n}</span></button>`)}
       <i class="lgrim" aria-hidden="true"></i>
     </div></nav>

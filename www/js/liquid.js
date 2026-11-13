@@ -55,9 +55,10 @@ function ensureHost() {
 }
 
 // 给一个元素装上折射。el 里要有一个 .lgwarp 子元素（毛玻璃层）
-export function liquidify(el, { id = "lg" + Math.random().toString(36).slice(2, 7), radius = 32, band = 20, scale = 36 } = {}) {
+// sel：要装滤镜的子元素；backdrop：true 时装在「背后的内容」上（泡泡像放大镜一样弯折后面的东西）
+export function liquidify(el, { id = "lg" + Math.random().toString(36).slice(2, 7), radius = 32, band = 20, scale = 36, sel = ".lgwarp", backdrop = false, cls = "lg-on" } = {}) {
   if (!el || !canRefract()) return () => {};
-  const warp = el.querySelector(".lgwarp");
+  const warp = el.querySelector(sel);
   if (!warp) return () => {};
   const svg = ensureHost();
   const f = document.createElementNS(NS, "filter");
@@ -79,11 +80,12 @@ export function liquidify(el, { id = "lg" + Math.random().toString(36).slice(2, 
     for (const n of [f, im]) { n.setAttribute("width", String(w)); n.setAttribute("height", String(h)); }
     im.setAttribute("x", "0"); im.setAttribute("y", "0");
     im.setAttribute("href", mapURL(w, h, radius, band));
-    warp.style.filter = `url(#${id})`;
-    el.classList.add("lg-on");
+    if (backdrop) warp.style.setProperty("--lens", `url(#${id})`);
+    else warp.style.filter = `url(#${id})`;
+    el.classList.add(cls);
   };
   size();
   const ro = "ResizeObserver" in window ? new ResizeObserver(size) : null;
   if (ro) ro.observe(warp);
-  return () => { if (ro) ro.disconnect(); f.remove(); warp.style.filter = ""; el.classList.remove("lg-on"); };
+  return () => { if (ro) ro.disconnect(); f.remove(); warp.style.filter = ""; warp.style.removeProperty("--lens"); el.classList.remove(cls); };
 }
