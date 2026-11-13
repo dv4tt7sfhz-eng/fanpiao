@@ -1,0 +1,16 @@
+node_modules/
+signing/
+keystore.properties
+*.jks
+*.keystore
+*.apk
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/app/release/
+.DS_Store
+ios/App/Pods/
+ios/App/build/
+server/node_modules/
+.env

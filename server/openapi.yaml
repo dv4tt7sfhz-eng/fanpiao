@@ -1,0 +1,268 @@
+openapi: 3.0.3
+info:
+  title: 饭票 API
+  version: 1.0.0
+  description: |
+    饭票 App 的云端接口（预留）。App 默认不连服务器；在「我的 → 云端账号和备份」里填上服务器地址后才会用到。
+    参考实现：server/server.mjs（零依赖 Node 程序）。所有请求和响应都是 JSON，出错时返回 `{"error": "中文说明"}`。
+servers:
+  - url: https://api.example.com
+    description: 换成你自己的服务器地址（必须是 HTTPS）
+tags:
+  - name: 基础
+  - name: 账号
+  - name: 数据
+  - name: AI
+paths:
+  /v1/health:
+    get:
+      tags: [基础]
+      summary: 服务器是否正常、有没有配置 AI
+      responses:
+        "200":
+          description: 正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name: { type: string, example: 饭票服务器 }
+                  version: { type: string, example: 1.0.0 }
+                  ai: { type: boolean, description: 服务器是否配置了模型密钥 }
+  /v1/foods:
+    get:
+      tags: [基础]
+      summary: 公共食物库
+      description: 返回内置食物库。以后可以改成从数据库读，这样不用发新版 App 就能加食物。
+      responses:
+        "200":
+          description: 食物列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { type: string }
+                  foods:
+                    type: array
+                    items: { $ref: "#/components/schemas/Food" }
+  /v1/auth/register:
+    post:
+      tags: [账号]
+      summary: 注册
+      requestBody: { $ref: "#/components/requestBodies/Credentials" }
+      responses:
+        "201": { $ref: "#/components/responses/Session" }
+        "400": { $ref: "#/components/responses/Error" }
+        "409": { $ref: "#/components/responses/Error" }
+  /v1/auth/login:
+    post:
+      tags: [账号]
+      summary: 登录
+      description: 同一账号 15 分钟内连续输错 5 次密码会被暂时锁定（429）。
+      requestBody: { $ref: "#/components/requestBodies/Credentials" }
+      responses:
+        "200": { $ref: "#/components/responses/Session" }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+  /v1/auth/logout:
+    post:
+      tags: [账号]
+      summary: 退出登录（让当前令牌失效）
+      security: [{ bearer: [] }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Error" }
+  /v1/account:
+    delete:
+      tags: [账号]
+      summary: 注销账号并删除服务器上的全部数据
+      security: [{ bearer: [] }]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Error" }
+  /v1/state:
+    get:
+      tags: [数据]
+      summary: 取回备份
+      security: [{ bearer: [] }]
+      responses:
+        "200":
+          description: 备份内容。还没备份过时 state 为 null。
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  state: { $ref: "#/components/schemas/State" }
+                  updatedAt: { type: string, format: date-time, nullable: true }
+        "401": { $ref: "#/components/responses/Error" }
+    put:
+      tags: [数据]
+      summary: 上传备份（整份覆盖）
+      description: 最大 1MB。服务器不会保存其中的 AI 密钥。
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [state]
+              properties:
+                state: { $ref: "#/components/schemas/State" }
+      responses:
+        "200":
+          description: 已保存
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  updatedAt: { type: string, format: date-time }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "413": { $ref: "#/components/responses/Error" }
+  /v1/ai/chat:
+    post:
+      tags: [AI]
+      summary: 由服务器代用户调用模型
+      description: |
+        App 把提示词发给服务器，服务器用自己的密钥去调 OpenAI 兼容的模型（DeepSeek、通义千问等），
+        把模型回答解析成 JSON 后返回。这样用户不用自己填密钥，运营方可以按账号限制次数或收费。
+        每个账号每天有次数上限（环境变量 AI_DAILY_LIMIT）。
+        带照片的请求会改用识图模型（环境变量 AI_VISION_MODEL，不填就用 AI_MODEL）。
+      security: [{ bearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [messages]
+              properties:
+                messages:
+                  type: array
+                  maxItems: 8
+                  items:
+                    type: object
+                    required: [role, content]
+                    properties:
+                      role: { type: string, enum: [system, user, assistant] }
+                      content:
+                        description: 文字；或者带照片的数组（拍照识别食物用，最多 2 张，只收 base64 的 jpeg/png/webp，每张不超过约 650KB）
+                        oneOf:
+                          - type: string
+                          - type: array
+                            maxItems: 6
+                            items:
+                              type: object
+                              properties:
+                                type: { type: string, enum: [text, image_url] }
+                                text: { type: string }
+                                image_url: { type: object, properties: { url: { type: string, example: "data:image/jpeg;base64,..." } } }
+      responses:
+        "200":
+          description: 模型的回答（已解析成 JSON）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                    description: 排餐时是 {meals, tip}；估营养时是 {k, p, f, cb, note}；拍照识别时是 {items, note}
+                  remaining: { type: integer, description: 今天还能用几次 }
+        "400": { $ref: "#/components/responses/Error" }
+        "401": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/Error" }
+        "501": { description: 服务器还没配置 AI, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        "502": { description: 模型服务出错, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: 注册或登录返回的 token，有效期 90 天
+  requestBodies:
+    Credentials:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [user, password]
+            properties:
+              user: { type: string, minLength: 3, maxLength: 64, pattern: "^[A-Za-z0-9_.@-]+$" }
+              password: { type: string, minLength: 8, maxLength: 200 }
+  responses:
+    Session:
+      description: 登录成功
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              user: { type: string }
+              token: { type: string, description: 之后的请求放在 Authorization Bearer 里 }
+    Ok:
+      description: 成功
+      content:
+        application/json:
+          schema: { type: object, properties: { ok: { type: boolean } } }
+    Error:
+      description: 出错
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string, example: 请先登录 }
+    Food:
+      type: object
+      description: 营养数值都是「每 1 个单位」的量
+      properties:
+        id: { type: string }
+        n: { type: string, description: 名称 }
+        c: { type: string, description: 分类 }
+        u: { type: string, description: 单位 }
+        k: { type: number, description: 千卡 }
+        p: { type: number, description: 蛋白质 g }
+        f: { type: number, description: 脂肪 g }
+        cb: { type: number, description: 碳水 g }
+        $: { type: number, description: 默认价格 元 }
+        ck: { type: integer, enum: [0, 1, 2], description: 0 即食 / 1 要热水 / 2 要开火 }
+        r: { type: string, enum: [staple, protein, veg, fruit, dairy, fat, meal, manual], description: 角色 }
+        s: { type: string, description: 适合哪几餐，b早 l午 d晚 s加餐 }
+        v: { type: number, description: 算多少克蔬菜 }
+        st: { type: number, description: 每次加减多少个单位 }
+        mx: { type: number, description: 一天最多几个单位 }
+        out: { type: boolean, description: 食堂或外面买的 }
+    State:
+      type: object
+      nullable: true
+      description: App 的全部本地数据（和「导出」的内容一样）
+      properties:
+        v: { type: integer }
+        profile:
+          type: object
+          properties:
+            sex: { type: string, enum: [m, f] }
+            age: { type: number }
+            height: { type: number }
+            weight: { type: number }
+            goal: { type: string, enum: [gain, cut, keep] }
+            activity: { type: number }
+        prefs:
+          type: object
+          properties:
+            modes: { type: object, description: "{b,l,d} 各是 out / cold / cook" }
+            snack: { type: boolean }
+            budget: { type: number }
+        pantry: { type: object, description: 对内置食物的改动 }
+        custom: { type: array, items: { $ref: "#/components/schemas/Food" } }
+        days: { type: object, description: 按日期保存的每天安排和打勾记录 }
+        weights: { type: array, items: { type: object, properties: { d: { type: string }, kg: { type: number } } } }

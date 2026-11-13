@@ -1,0 +1,26 @@
+{
+  "name": "fanpiao",
+  "version": "1.5.1",
+  "private": true,
+  "description": "饭票：按预算、按热量排好每天健身餐的 App",
+  "scripts": {
+    "sync": "cap sync",
+    "android": "cd android && ./gradlew assembleRelease",
+    "server": "node server/server.mjs",
+    "test:server": "node server/test.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/ios": "^8.6.0",
+    "@fontsource/nunito": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
+    "htm": "^3.1.1",
+    "preact": "^10.27.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
+  }
+}
