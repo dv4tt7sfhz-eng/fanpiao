@@ -1,10 +1,12 @@
 // 「食物」页：勾选能吃到的食物、改价格、加自己的食物、生成采购清单
 import { html, useState, useMemo, app, commit, UI, Sheet, Seg, Field, r0, yuan, qtyText, num, copyText } from "./ui.js";
-import { allFoods } from "./store.js";
+import { allFoods, dateStr, addDays } from "./store.js";
+import { targetsFor, dayInfo } from "./plans.js";
 import { CATS, CK_LABEL, ROLE_LABEL, FOODS } from "./foods.js";
 import { targetsOf, SLOTS } from "./nutrition.js";
 import { makePlan } from "./planner.js";
 import { aiReady, chatJSON, estimateMessages } from "./ai.js";
+import { searchLib, LibRow, libSize } from "./lib.js";
 
 export function FoodsView() {
   const S = app.S;
@@ -38,23 +40,28 @@ export function FoodsView() {
     <div class="card"><div class="list">
       ${list.map((f) => html`<div class="lrow" key=${f.id}>
         <button class="main" onClick=${() => UI.open({ t: "food", id: f.id })}>
-          <b>${f.n} ${f.custom ? html`<span class="tag">${f.pack ? "营养表" : f.snap ? "拍照加的" : f.ai ? "AI 加的" : "自己加的"}</span>` : null}${(f.na || 0) >= 600 ? html` <span class="tag na">高钠</span>` : null}${(f.fb || 0) >= 4 ? html` <span class="tag fb">高纤维</span>` : null}</b>
+          <b>${f.n} ${f.custom ? html`<span class="tag">${f.pack ? "营养表" : f.snap ? "拍照加的" : f.ai ? "AI 加的" : f.lib ? "食物库" : "自己加的"}</span>` : null}${(f.na || 0) >= 600 ? html` <span class="tag na">高钠</span>` : null}${(f.fb || 0) >= 4 ? html` <span class="tag fb">高纤维</span>` : null}</b>
           <span class="num">每${f.u}：${r0(f.k)} 千卡　蛋白 ${f.p}g　¥${yuan(f.$)}　${f.out ? "外食" : CK_LABEL[f.ck]}</span>
         </button>
         <button class="tog" aria-label=${"勾选 " + f.n} aria-pressed=${String(!!f.on)} onClick=${() => toggle(f)}></button>
       </div>`)}
-      ${!list.length ? html`<p class="muted">没找到。点上面的「拍一下加食物」或「手动加食物」加进来。</p>` : null}
+      ${!list.length ? html`<p class="muted">${q ? "你的食物里没有。看看下面的食物库，或者点上面的「拍一下加食物」。" : "没找到。点上面的「拍一下加食物」或「手动加食物」加进来。"}</p>` : null}
     </div></div>
+    ${q.trim() ? html`<div class="card" id="lib-res"><h2>食物库里的 <span class="tag">${libSize()} 种 · 每 100 克</span></h2><div class="list">
+      ${searchLib(q).map((x) => html`<${LibRow} key=${x.lid} x=${x} onPick=${(x) => UI.open({ t: "lib", lid: x.lid })} />`)}
+      ${!searchLib(q).length ? html`<p class="muted">食物库里也没有。可以手动加，或者让 AI 估一下。</p>` : null}
+    </div></div>` : null}
     <p class="tiny muted">营养数值是常见食物的典型值，不同品牌会有差别。买到的东西请以包装上的营养成分表为准，点进去就能改。</p>`;
 }
 
 const ROLES = ["staple", "protein", "veg", "fruit", "dairy", "fat"];
 
-export function FoodSheet({ id, onClose }) {
+export function FoodSheet({ id, pre, onClose }) {
   const S = app.S;
   const cur = id ? allFoods(S).find((f) => f.id === id) : null;
   const builtin = cur && !cur.custom;
   const [f, setF] = useState(() => cur ? { ...cur, k: String(cur.k), p: String(cur.p), f: String(cur.f), cb: String(cur.cb), $: String(cur.$), na: String(cur.na || 0), fb: String(cur.fb || 0) }
+    : pre ? { ...pre, k: String(pre.k), p: String(pre.p), f: String(pre.f), cb: String(pre.cb), $: "", na: String(pre.na || 0), fb: String(pre.fb || 0), on: true }
     : { n: "", u: "份", c: "主食", k: "", p: "", f: "", cb: "", $: "", na: "", fb: "", ck: 0, r: "staple", s: "ld", on: true });
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -72,8 +79,8 @@ export function FoodSheet({ id, onClose }) {
     commit((S) => {
       if (builtin) S.pantry[id] = { ...(S.pantry[id] || {}), ...v, on: f.on };
       else {
-        const rec = { id: id || "u" + Date.now().toString(36), n: f.n.trim(), u: f.u.trim() || "份", c: f.c, ...v, ck: f.ck, r: f.r, s: f.s, on: f.on, out: f.c === "食堂外食",
-          ...(cur && cur.snap ? { snap: true } : {}), ...(cur && cur.pack ? { pack: true } : {}) };
+        const rec = { id: id || (pre && pre.id) || "u" + Date.now().toString(36), n: f.n.trim(), u: f.u.trim() || "份", c: f.c, ...v, ck: f.ck, r: f.r, s: f.s, on: f.on, out: f.c === "食堂外食",
+          ...(cur && cur.snap ? { snap: true } : {}), ...(cur && cur.pack ? { pack: true } : {}), ...((cur && cur.lib) || (pre && pre.lib) ? { lib: true } : {}), ...(cur && cur.ai ? { ai: true } : {}) };
         const i = S.custom.findIndex((x) => x.id === rec.id);
         if (i >= 0) S.custom[i] = rec; else S.custom.push(rec);
       }
@@ -144,13 +151,14 @@ export function ShopSheet({ onClose }) {
   const res = useMemo(() => {
     const foods = allFoods(S).filter((f) => f.on);
     const byId = Object.fromEntries(foods.map((f) => [f.id, f]));
-    const T = targetsOf(S.profile);
     const need = {};
+    const today = dateStr();
     let prev = null;
     for (let i = 0; i < days; i++) {
       const avoid = {};
       for (const s of SLOTS) avoid[s] = new Set(prev ? prev[s].map((it) => it.id) : []);
-      const pl = makePlan({ foods, T, modes: S.prefs.modes, budget: S.prefs.budget, snack: S.prefs.snack, seed: 1000 + i * 77 + days, avoid });
+      const d = addDays(today, i), info = dayInfo(S, d);
+      const pl = makePlan({ foods, T: targetsFor(S, d, {}), modes: S.prefs.modes, budget: S.prefs.budget, snack: S.prefs.snack, seed: 1000 + i * 77 + days, avoid, skip: info.skip, plate: info.plate });
       prev = pl.meals;
       for (const s of SLOTS) for (const it of pl.meals[s]) need[it.id] = (need[it.id] || 0) + it.qty;
     }

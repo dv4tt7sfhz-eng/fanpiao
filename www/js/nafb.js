@@ -2,6 +2,7 @@
 import { html, useState, useEffect, useRef, app, commit, UI, Sheet, Seg, r0 } from "./ui.js";
 import { sumItems, planItems, targetsOf, SLOTS, SLOT_NAME, saltOf } from "./nutrition.js";
 import { allFoods, dateStr, dayOf } from "./store.js";
+import { targetsFor } from "./plans.js";
 import { Roll, useReveal, burst, haptic, calm } from "./fx.js";
 
 const SHAKER = html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 9.5h8l1 10a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 7 19.5z" /><path d="M8.6 9.5 9.4 5h5.2l.8 4.5" /><path d="M10.8 6.8h.01M13.2 6.8h.01M12 5.9h.01" /></svg>`;
@@ -23,7 +24,7 @@ export function sources(plan, byId, key) {
 function useCtx() {
   const S = app.S, day = dayOf(S, dateStr());
   const foods = allFoods(S), byId = Object.fromEntries(foods.map((f) => [f.id, f]));
-  const T = targetsOf(S.profile, day);
+  const T = targetsFor(S, dateStr(), day);
   const plan = day.plan;
   return { S, day, foods, byId, T, plan, tp: sumItems(planItems(plan), (id) => byId[id]), te: sumItems(planItems(plan, true), (id) => byId[id]) };
 }

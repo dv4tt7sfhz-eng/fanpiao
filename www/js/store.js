@@ -13,8 +13,9 @@ export function blank() {
     prefs: { modes: { b: "cold", l: "out", d: "cook" }, snack: true, budget: 30 },
     pantry: {}, // 对内置食物的改动：{id: {on, $, k, p, f, cb}}
     custom: [], // 自己加的食物
-    days: {}, // {"2026-11-12": {modes, activeKcal, plan:{meals}, tip, src}}
+    days: {}, // {"2026-11-12": {modes, activeKcal, plan:{meals}, tip, src, kind?}}
     weights: [], // [{d, kg}]
+    cycle: null, // 饮食周期计划，见 plans.js；null = 稳稳来
     ai: { provider: "deepseek", base: "", model: "", key: "", vprovider: "", vbase: "", vmodel: "", vkey: "" },
     cloud: { url: "", token: "", user: "", last: "" },
   };

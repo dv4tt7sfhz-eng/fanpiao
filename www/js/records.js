@@ -10,7 +10,104 @@ function Tw({ v, f }) {
   return f ? f(x) : String(Math.round(x));
 }
 import { allFoods, dateStr, addDays } from "./store.js";
-import { sumItems, planItems, targetsOf } from "./nutrition.js";
+import { sumItems, planItems, targetsOf, SLOTS, SLOT_NAME } from "./nutrition.js";
+import { targetsFor, dayInfo, dayLabel, KIND } from "./plans.js";
+
+const WD = "一二三四五六日";
+const pad = (n) => String(n).padStart(2, "0");
+
+// 减脂 / 增肌日历：每天的计划日型、有没有记饮食、有没有称体重；点一天看那天的详情，也能改那天是高碳还是低碳
+function Calendar() {
+  const S = app.S, today = dateStr();
+  const [ym, setYm] = useState(today.slice(0, 7));
+  const [sel, setSel] = useState(today);
+  const [kg, setKg] = useState("");
+  const y = +ym.slice(0, 4), m = +ym.slice(5, 7);
+  const first = new Date(y, m - 1, 1), lead = (first.getDay() + 6) % 7, dim = new Date(y, m, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push(null);
+  for (let d = 1; d <= dim; d++) cells.push(`${ym}-${pad(d)}`);
+  while (cells.length % 7) cells.push(null);
+  const shift = (n) => { const d = new Date(y, m - 1 + n, 1); setYm(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`); };
+  const byId = Object.fromEntries(allFoods(S).map((f) => [f.id, f]));
+  const ate = (d) => { const x = S.days[d]; return !!(x && x.plan && planItems(x.plan, true).length); };
+  const wOf = (d) => S.weights.find((w) => w.d === d);
+  const cyc = !!S.cycle;
+
+  // 选中那一天
+  const day = S.days[sel] || {};
+  const info = dayInfo(S, sel), T = targetsFor(S, sel, day);
+  const te = day.plan ? sumItems(planItems(day.plan, true), (id) => byId[id]) : null;
+  const w = wOf(sel);
+  const canKind = cyc && info.on && (!!info.plan.week || !!S.cycle.seq);
+  const setKind = (k) => commit((S) => {
+    const x = S.days[sel] || (S.days[sel] = { modes: { ...S.prefs.modes }, activeKcal: null, plan: null, tip: "", src: "" });
+    if (k) x.kind = k; else delete x.kind;
+    // 改的是今天、而且还没打勾：按新日型重排
+    if (sel === today && x.plan && !planItems(x.plan, true).length) x.plan = null;
+  });
+  const saveKg = () => {
+    const v = num(kg);
+    if (!(v >= 30 && v <= 250)) return UI.toast("体重请填 30–250 之间的数字");
+    commit((S) => {
+      const i = S.weights.findIndex((w) => w.d === sel);
+      if (i >= 0) S.weights[i].kg = v; else S.weights.push({ d: sel, kg: v });
+      S.weights.sort((a, b) => (a.d < b.d ? -1 : 1));
+      if (sel === S.weights[S.weights.length - 1].d) S.profile.weight = v;
+    });
+    setKg(""); UI.toast(`${+sel.slice(5, 7)} 月 ${+sel.slice(8)} 日的体重记好了`);
+  };
+  const meals = day.plan ? SLOTS.map((s) => [s, day.plan.meals[s].filter((it) => it.done && byId[it.id])]).filter(([, a]) => a.length) : [];
+  const pctK = te && T.kcal ? Math.min(1, te.kcal / T.kcal) : 0;
+  const future = sel > today;
+  return html`<div class="card cal" id="cal">
+    <div class="calh">
+      <button class="calnav" aria-label="上个月" onClick=${() => shift(-1)}><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" /></svg></button>
+      <b>${y} 年 ${m} 月</b>
+      <button class="calnav" aria-label="下个月" onClick=${() => shift(1)}><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg></button>
+      ${ym !== today.slice(0, 7) || sel !== today ? html`<button class="caltoday" onClick=${() => { setYm(today.slice(0, 7)); setSel(today); }}>回到今天</button>` : null}
+    </div>
+    <div class="calgrid" role="grid" aria-label=${`${y} 年 ${m} 月`}>
+      ${[...WD].map((w) => html`<span class="calwd">${w}</span>`)}
+      ${cells.map((d) => {
+        if (!d) return html`<span class="calc empty"></span>`;
+        const k = cyc ? dayInfo(S, d).kind : null;
+        return html`<button class=${"calc" + (d === today ? " today" : "") + (d === sel ? " sel" : "") + (d > today ? " fut" : "") + (k ? " k-" + k : "")} aria-pressed=${String(d === sel)}
+          aria-label=${`${+d.slice(8)} 日${k ? " " + KIND[k].n : ""}${ate(d) ? "，有饮食记录" : ""}${wOf(d) ? "，称了体重" : ""}`} onClick=${() => setSel(d)}>
+          <span class="dn num">${+d.slice(8)}</span>
+          <span class="mk">${k ? html`<i class="kb"></i>` : null}${ate(d) ? html`<i class="dot eat"></i>` : null}${wOf(d) ? html`<i class="dot wt"></i>` : null}</span>
+        </button>`;
+      })}
+    </div>
+    <div class="callegend">
+      ${cyc ? html`<span><i class="kb k-H"></i>高碳</span><span><i class="kb k-M"></i>中碳</span><span><i class="kb k-L"></i>低碳</span>` : null}
+      <span><i class="dot eat"></i>饮食</span><span><i class="dot wt"></i>体重</span>
+    </div>
+
+    <div class="calday" id="cal-day" key=${sel}>
+      <div class="cdh"><b>${+sel.slice(5, 7)} 月 ${+sel.slice(8)} 日 周${WD[(new Date(sel + "T12:00:00").getDay() + 6) % 7]}</b>
+        ${T.kind ? html`<span class=${"kpill k-" + T.kind}>${KIND[T.kind].n}</span>` : null}</div>
+      ${dayLabel(S, sel) ? html`<p class="tiny muted" style="margin:2px 0 0">${(S.cycle && S.cycle.name) || info.plan.n} · ${dayLabel(S, sel)}</p>` : null}
+      <div class="cdgrid">
+        <div class="cdring" style=${`--v:${pctK}`}><svg viewBox="0 0 64 64" aria-hidden="true"><circle class="tr" cx="32" cy="32" r="27" /><circle class="fl" cx="32" cy="32" r="27" pathLength="1" /></svg>
+          <span><b class="num">${te ? r0(pctK * 100) : "–"}</b><small>${te ? "%" : ""}</small></span></div>
+        <div class="cdnums">
+          <div><span>${future ? "那天的目标" : "吃了 / 目标"}</span><b class="num">${future || !te ? "" : r0(te.kcal) + " / "}${T.kcal} 千卡</b></div>
+          <div class="num small muted">蛋白 ${te && !future ? r0(te.p) + "/" : ""}${T.protein}　碳水 ${te && !future ? r0(te.cb) + "/" : ""}${T.carb}　脂肪 ${te && !future ? r0(te.f) + "/" : ""}${T.fat} g</div>
+        </div>
+      </div>
+      ${meals.length ? html`<div class="cdmeals">${meals.map(([s, a]) => html`<div><span>${SLOT_NAME[s]}</span><p>${a.map((it) => byId[it.id].n).join("、")}</p></div>`)}</div>`
+        : !future ? html`<p class="small muted" style="margin:6px 0 0">${sel === today ? "今天还没打勾。吃完一样，在「今天」页点它前面的圆圈。" : "这天没有饮食记录。"}</p>` : null}
+      ${canKind ? html`<div class="field" style="margin-top:12px">这一天改成
+        <div class="kseg wide">${[["", "跟计划"], ["H", "高碳"], ["M", "中碳"], ["L", "低碳"]].map(([k, n]) => html`<button class=${k ? "k-" + k : ""} aria-pressed=${String((day.kind || "") === k)} onClick=${() => setKind(k)}>${n}</button>`)}</div></div>` : null}
+      ${!future ? html`<div class="cdw">
+        <span>体重</span>${w ? html`<b class="num">${w.kg} kg</b>` : html`<em>未记录</em>`}
+        <input class="inp" id="cal-kg" inputmode="decimal" placeholder=${w ? "改一下" : "填 kg"} value=${kg} onInput=${(e) => setKg(e.target.value)} />
+        <button class="btn sm" id="cal-kg-save" onClick=${saveKg}>记</button>
+      </div>` : null}
+    </div>
+  </div>`;
+}
 
 function BarChart({ rows, target, unit, color, tl = "目标" }) {
   const W = 320, H = 150, L = 34, R = 6, T = 12, B = 22;
@@ -85,6 +182,7 @@ export function Records() {
   const diff = ws.length > 1 ? ws[ws.length - 1].kg - ws[0].kg : 0;
   return html`
     <div class="top"><div><h1>记录</h1><p class="sub">只统计打了勾（真的吃了）的食物。</p></div></div>
+    <${Calendar} />
     <${Seg} value=${n} onChange=${setN} options=${[{ v: 7, n: "最近 7 天" }, { v: 30, n: "最近 30 天" }]} />
     <div class="card stack">
       <div class="tiles">

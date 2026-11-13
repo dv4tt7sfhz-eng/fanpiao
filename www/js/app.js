@@ -11,6 +11,8 @@ import { NaFbSheet } from "./nafb.js";
 import { Me, ProfileSheet, AISetSheet, CloudSheet, DataSheet, AboutSheet } from "./me.js";
 import { detectPreview } from "./ai.js";
 import { AIImportSheet, fromLink } from "./aiimport.js";
+import { LibSheet } from "./lib.js";
+import { PlanSheet, PlanEditSheet } from "./plansview.js";
 import { haptic, fullFx, installRipple } from "./fx.js";
 import { Splash, Calc, AIThinking, Wipe, Celebrate } from "./fullscreen.js";
 
@@ -22,7 +24,7 @@ const TABS = [
 ];
 const TITLE = { today: "今天", foods: "食物", records: "记录", me: "我的" };
 const SHEETS = { target: TargetSheet, mode: ModeSheet, item: ItemSheet, pick: PickSheet, ai: AISheet, food: FoodSheet, shop: ShopSheet, snap: SnapSheet, nafb: NaFbSheet,
-  profile: ProfileSheet, aiset: AISetSheet, cloud: CloudSheet, data: DataSheet, about: AboutSheet, aiimport: AIImportSheet };
+  profile: ProfileSheet, aiset: AISetSheet, cloud: CloudSheet, data: DataSheet, about: AboutSheet, aiimport: AIImportSheet, lib: LibSheet, plan: PlanSheet, planedit: PlanEditSheet };
 const FSC = { splash: Splash, calc: Calc, ai: AIThinking, wipe: Wipe, cele: Celebrate };
 const root = document.documentElement;
 installRipple();

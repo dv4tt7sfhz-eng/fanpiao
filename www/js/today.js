@@ -8,6 +8,8 @@ import { CATS, CK_LABEL, ROLE_LABEL } from "./foods.js";
 import { useTween, burst, confetti, haptic, fullFx, Roll, useReveal, calm } from "./fx.js";
 import { skyOf } from "./fullscreen.js";
 import { NaFbCard } from "./nafb.js";
+import { searchLib, LibRow } from "./lib.js";
+import { targetsFor, dayInfo, dayLabel, KIND } from "./plans.js";
 
 const WEEK = "日一二三四五六";
 
@@ -15,20 +17,21 @@ function context() {
   const S = app.S, d = dateStr(), day = dayOf(S, d);
   const foods = allFoods(S);
   const byId = Object.fromEntries(foods.map((f) => [f.id, f]));
-  const T = targetsOf(S.profile, day);
-  return { S, d, day, foods, byId, T, enabled: foods.filter((f) => f.on) };
+  const T = targetsFor(S, d, day);
+  const info = dayInfo(S, d);
+  return { S, d, day, foods, byId, T, info, enabled: foods.filter((f) => f.on) };
 }
 
 // 本地重排。已经打勾（吃了）的保留不动。
 export function replanLocal(variety) {
-  const { S, d, day, T, enabled, byId } = context();
+  const { S, d, day, T, info, enabled, byId } = context();
   const locked = {}, avoid = {};
   const prev = day.plan || (S.days[addDays(d, -1)] || {}).plan;
   for (const s of SLOTS) {
     locked[s] = day.plan ? day.plan.meals[s].filter((it) => it.done && byId[it.id]) : [];
     avoid[s] = new Set(prev && (variety || !day.plan) ? prev.meals[s].filter((it) => !it.done).map((it) => it.id) : []);
   }
-  const plan = makePlan({ foods: enabled, T, modes: day.modes, budget: S.prefs.budget, snack: S.prefs.snack, locked, avoid, seed: Date.now() });
+  const plan = makePlan({ foods: enabled, T, modes: day.modes, budget: S.prefs.budget, snack: S.prefs.snack, locked, avoid, seed: Date.now(), skip: info.skip, plate: info.plate });
   commit(() => { day.plan = { meals: plan.meals }; day.tip = ""; day.src = "local"; day.T = { kcal: T.kcal, protein: T.protein }; day.pv = (day.pv || 0) + 1; });
 }
 
@@ -96,7 +99,7 @@ function Hero({ S, day, T, tp, te, plan, byId, onAct, act }) {
     <div class="cshade" aria-hidden="true"></div>
     <div class="ctop">
       <span class="hdate">${now.getMonth() + 1}月${now.getDate()}日 周${WEEK[now.getDay()]}</span>
-      <button class="cchip gl" id="goal-chip" onClick=${() => UI.open({ t: "target" })}>${GOALS[T.goal].n}目标
+      <button class="cchip gl" id="goal-chip" onClick=${() => UI.open({ t: "target" })}>${T.kind ? KIND[T.kind].n : GOALS[T.goal].n + "目标"}
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></button>
     </div>
     <div class="cbig">
@@ -228,19 +231,25 @@ function Meal({ slot, items, mode, byId, idx }) {
 
 // ---------- 弹出面板 ----------
 export function TargetSheet({ onClose }) {
-  const { T, S, day } = context();
+  const { T, S, d, day, info } = context();
   const p = S.profile;
+  const lab = dayLabel(S, d);
   return html`<${Sheet} title="今天的目标怎么算的" onClose=${onClose}>
+    <button class="plannav" id="tgt-plan" onClick=${() => UI.open({ t: "plan" })}>
+      <span class="pn"><small>饮食计划</small><b>${S.cycle && S.cycle.name ? S.cycle.name : info.plan.n}</b>${lab ? html`<em>${lab}</em>` : null}</span>
+      <span class="go">换计划<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></span>
+    </button>
     <div class="card">
       <div class="kv"><span>基础代谢（躺一天也会消耗）</span><b class="num">${T.rest} 千卡</b></div>
       <div class="kv"><span>${T.basis === "watch" ? `加上手表活动 ${day.activeKcal} 千卡` : "乘以平时活动量 " + p.activity}</span><b class="num">${T.tdee} 千卡</b></div>
       <div class="kv"><span>${GOALS[T.goal].n}${T.adj > 0 ? "，多吃" : T.adj < 0 ? "，少吃" : "，不加不减"}</span><b class="num">${T.adj > 0 ? "+" : ""}${T.adj} 千卡</b></div>
+      ${T.base && T.base !== T.kcal ? html`<div class="kv"><span>按计划${T.kind ? "（" + KIND[T.kind].n + "）" : ""}调整</span><b class="num">${T.kcal > T.base ? "+" : ""}${T.kcal - T.base} 千卡</b></div>` : null}
       <div class="kv"><span>今天的热量目标</span><b class="num">${T.kcal} 千卡</b></div>
     </div>
     <div class="card">
-      <div class="kv"><span>蛋白质（每公斤体重 ${T.ppk} g）</span><b class="num">${T.protein} g</b></div>
-      <div class="kv"><span>脂肪（约占热量的 25%）</span><b class="num">${T.fat} g</b></div>
-      <div class="kv"><span>碳水（剩下的热量）</span><b class="num">${T.carb} g</b></div>
+      <div class="kv"><span>蛋白质${S.cycle && S.cycle.id === "manual" ? "（自己定的）" : `（每公斤体重 ${T.ppk} g）`}</span><b class="num">${T.protein} g</b></div>
+      <div class="kv"><span>脂肪${T.kind === "L" ? "（低碳日多一点）" : T.kind === "H" ? "（高碳日少一点）" : S.cycle ? "" : "（约占热量的 25%）"}</span><b class="num">${T.fat} g</b></div>
+      <div class="kv"><span>碳水${T.kind === "L" ? "（低碳日减半）" : T.kind === "H" ? "（高碳日多一半）" : "（剩下的热量）"}</span><b class="num">${T.carb} g</b></div>
     </div>
     ${T.floored ? html`<div class="note warn">算出来的数低于安全下限，已经按下限 ${T.kcal} 千卡来排。吃得太少会掉肌肉、没力气。</div>` : null}
     ${p.age < 18 ? html`<div class="note warn">你未满 18 岁，还在长身体，这里不按减脂来算。</div>` : null}
@@ -326,14 +335,17 @@ export function PickSheet({ slot, onClose }) {
           <span class="num">每${f.u}：${f.k} 千卡　蛋白 ${f.p}g　¥${yuan(f.$)}</span></button><span class="side">＋</span></div>`)}
       </div></div>` : null;
     })}
-    ${!list.length ? html`<p class="muted">没找到。可以到「食物」页添加自己的食物。</p>` : null}
+    ${!list.length ? html`<p class="muted">${q ? "你的食物里没有，看看下面食物库里的。" : "没找到。可以到「食物」页添加自己的食物。"}</p>` : null}
+    ${q.trim() ? html`<div class="card" id="pick-lib"><h2>食物库 <span class="tag">每 100 克</span></h2><div class="list">
+      ${searchLib(q, 15).map((x) => html`<${LibRow} key=${x.lid} x=${x} onPick=${(x) => UI.open({ t: "lib", lid: x.lid, slot })} />`)}
+    </div></div>` : null}
   <//>`;
 }
 
 const ASK_PRESETS = ["今天练腿，多安排点碳水", "吃腻了，换点不一样的", "想吃清淡一点", "今天不想吃蛋白粉"];
 
 export function AISheet({ onClose }) {
-  const { S, day, T, enabled, byId } = context();
+  const { S, d, day, T, info, enabled, byId } = context();
   const [ask, setAsk] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
@@ -348,13 +360,18 @@ export function AISheet({ onClose }) {
       const doneSlots = SLOTS.filter((s) => day.plan && day.plan.meals[s].some((it) => it.done));
       const usable = enabled.filter((f) => SLOTS.some((s) => !doneSlots.includes(s) && candidates(s, day.modes[s] || "cold", [f]).length));
       let extra = ask.trim();
+      const lab = dayLabel(S, d);
+      if (lab) extra += `（今天的饮食计划：${info.plan.n}，${lab}。目标已经按计划算好了。）`;
+      if (info.skip.length) extra += `（轻断食：${info.skip.map((s) => SLOT_NAME[s]).join("、")}不吃，输出空数组。）`;
+      if (info.plate) extra += "（211 餐盘法：午饭、晚饭各两份蔬菜、一份蛋白、一份主食。）";
       if (doneSlots.length) extra += `（${doneSlots.map((s) => SLOT_NAME[s]).join("、")}已经吃完了：${doneSlots.map((s) => day.plan.meals[s].map((it) => byId[it.id].n + "×" + it.qty).join("、")).join("；")}。这几餐输出空数组，只排剩下的餐，让全天总量达标。）`;
       const raw = await chatJSON(S, planMessages({ profile: S.profile, T, modes: day.modes, budget: S.prefs.budget || 999, snack: S.prefs.snack, foods: usable, ask: extra, prevText: day.plan ? planToText(day.plan, byId) : "" }), ctl.current.signal);
       const clean = sanitizePlan(raw, Object.fromEntries(usable.map((f) => [f.id, f])));
       if (!clean) throw new Error("AI 给的方案里没有能用的食物，再试一次。");
       for (const s of doneSlots) clean.meals[s] = day.plan.meals[s].map((it) => ({ ...it }));
       // AI 定搭配，本地算法把数量调准
-      const tuned = makePlan({ foods: enabled, T, modes: day.modes, budget: S.prefs.budget, snack: S.prefs.snack, start: clean.meals, seed: Date.now() });
+      for (const s of info.skip) clean.meals[s] = clean.meals[s].filter((it) => it.done);
+      const tuned = makePlan({ foods: enabled, T, modes: day.modes, budget: S.prefs.budget, snack: S.prefs.snack, start: clean.meals, seed: Date.now(), skip: info.skip, plate: info.plate });
       commit(() => { day.plan = { meals: tuned.meals }; day.tip = typeof raw.tip === "string" ? raw.tip.slice(0, 200) : ""; day.src = "ai"; day.T = { kcal: T.kcal, protein: T.protein }; day.pv = (day.pv || 0) + 1; });
       if (big) { window.scrollTo(0, 0); UI.fsOut(); } else UI.toast("AI 排好了");
       onClose();

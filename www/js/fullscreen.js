@@ -3,6 +3,7 @@ import { html, useState, useEffect, useRef, app } from "./ui.js";
 import { calm, haptic, confetti, fireworks, useTween } from "./fx.js";
 import { targetsOf, sumItems, planItems } from "./nutrition.js";
 import { allFoods, dateStr } from "./store.js";
+import { targetsFor } from "./plans.js";
 
 export const skyOf = (h) => (h >= 5 && h < 9 ? "dawn" : h >= 9 && h < 16 ? "day" : h >= 16 && h < 19 ? "dusk" : "night");
 const STARS = [[7, 12], [17, 30], [27, 8], [39, 22], [50, 6], [61, 17], [70, 28], [79, 10], [89, 21], [94, 36], [12, 44], [84, 48], [22, 60], [66, 66], [44, 78], [90, 80]];
@@ -46,7 +47,7 @@ export function Splash({ onReveal, onDone }) {
   const S = app.S, now = new Date(), h = now.getHours();
   const day = S.days[dateStr()];
   const byId = Object.fromEntries(allFoods(S).map((f) => [f.id, f]));
-  const T = targetsOf(S.profile, day || {});
+  const T = targetsFor(S, dateStr(), day || {});
   const eaten = day && day.plan ? sumItems(planItems(day.plan, true), (id) => byId[id]).kcal : 0;
   const left = Math.max(0, Math.round(T.kcal - eaten));
   const hi = h >= 5 && h < 11 ? "早上好" : h >= 11 && h < 14 ? "中午好" : h >= 14 && h < 18 ? "下午好" : "晚上好";

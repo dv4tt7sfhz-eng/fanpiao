@@ -24,8 +24,20 @@ export function candidates(slot, mode, foods) {
 
 const SHARE = { withSnack: { b: 0.25, l: 0.35, d: 0.3, s: 0.1 }, noSnack: { b: 0.28, l: 0.38, d: 0.34, s: 0 } };
 
+// 轻断食跳过的那一餐不分热量，其余几餐按比例分
+function shareOf(snack, skip = []) {
+  const base = { ...(snack ? SHARE.withSnack : SHARE.noSnack) };
+  if (!skip.length) return base;
+  let gone = 0;
+  for (const s of skip) { gone += base[s]; base[s] = 0; }
+  const left = SLOTS.filter((s) => s !== "s" && base[s] > 0);
+  const sum = left.reduce((a, s) => a + base[s], 0);
+  for (const s of left) base[s] += (gone * base[s]) / sum;
+  return base;
+}
+
 export function scorePlan(meals, ctx) {
-  const { T, budget, byId, cand, avoid, snack } = ctx;
+  const { T, budget, byId, cand, avoid, snack, skip = [], plate } = ctx;
   const get = (id) => byId[id];
   const all = SLOTS.flatMap((s) => meals[s]);
   const t = sumItems(all, get);
@@ -44,11 +56,12 @@ export function scorePlan(meals, ctx) {
     if (t.cost > budget) { const e = (t.cost - budget) / budget; sc += 2000 * e * e + 5; }
     sc += (3 * t.cost) / budget;
   }
-  const share = snack ? SHARE.withSnack : SHARE.noSnack;
+  const share = shareOf(snack, skip);
   const seen = {};
   for (const s of SLOTS) {
     const items = meals[s];
     const mt = sumItems(items, get);
+    if (skip.includes(s)) { sc += 40 * items.filter((it) => !it.lock).length; continue; }
     if (s !== "s") { const d = mt.kcal / T.kcal - share[s]; sc += 150 * d * d; }
     else if (!snack && items.length) sc += 6 * items.length;
     const roles = new Set(items.map((it) => get(it.id).r));
@@ -58,6 +71,12 @@ export function scorePlan(meals, ctx) {
       if (!has("staple") && can("staple")) sc += 4;
       if (s !== "b" && !has("protein") && can("protein")) sc += 4;
       if (s !== "b" && mt.veg < 100 && cand[s].some((f) => f.v > 0)) sc += 2;
+      // 211 餐盘：午饭、晚饭蔬菜两份（约 200 g），主食只占一小份
+      if (plate && s !== "b" && cand[s].some((f) => f.v > 0)) {
+        if (mt.veg < 200) sc += 6 * ((200 - mt.veg) / 200);
+        const stK = sumItems(items.filter((it) => get(it.id).r === "staple"), get).kcal;
+        if (mt.kcal > 0 && stK / mt.kcal > 0.38) sc += 12 * (stK / mt.kcal - 0.38);
+      }
       if (items.length > 4) sc += 2 * (items.length - 4);
       const nStaple = items.filter((it) => get(it.id).r === "staple").length;
       if (nStaple > 1) sc += 1.2 * (nStaple - 1);
@@ -80,12 +99,13 @@ export function scorePlan(meals, ctx) {
 // opts: foods(已勾选的食物) T(目标) modes{b,l,d} budget snack seed locked{slot:[items]} avoid{slot:Set}
 // start: 给一份现成的搭配（比如 AI 排的），只调数量不换食物，让数字对上目标
 export function makePlan(opts) {
-  const { foods, T, modes, budget = 0, snack = true, seed = Date.now(), locked = {}, avoid = null, start = null } = opts;
+  const { foods, T, modes, budget = 0, snack = true, seed = Date.now(), locked = {}, avoid = null, start = null, skip = [], plate = false } = opts;
   const byId = Object.fromEntries(foods.map((f) => [f.id, f]));
   const cand = {};
   for (const s of SLOTS) cand[s] = candidates(s, modes[s] || "cold", foods);
   if (!snack) cand.s = [];
-  const ctx = { T, budget, byId, cand, avoid, snack };
+  for (const s of skip) cand[s] = [];
+  const ctx = { T, budget, byId, cand, avoid, snack, skip, plate };
   const lockedOk = (s) => (locked[s] || []).filter((it) => byId[it.id]).map((it) => ({ ...it, lock: true }));
   const R = rng(seed);
   const pick = (arr) => arr[Math.floor(R() * arr.length)];

@@ -184,9 +184,13 @@ export function planToText(plan, byId) {
 }
 
 // ---------- 拍照识别食物 ----------
-export function snapPrompt(foods) {
+export function snapPrompt(foods, desc = "", textOnly = false) {
   const lib = foods.map((f) => `${f.id}|${f.n}|${f.u}`).join("\n");
-  return `你是食物识别和营养估算助手。看这张照片，认出里面的食物，估算营养。只输出 JSON，不要任何别的文字。
+  const say = String(desc || "").trim().slice(0, 300);
+  const head = textOnly
+    ? `你是营养估算助手。用户没有拍照，只用一句话说了他吃的东西：「${say}」。把里面的每样食物分开，按中国常见做法和常见份量估算营养（没说份量就按一人份）。只输出 JSON，不要任何别的文字。`
+    : `你是食物识别和营养估算助手。看这张照片，认出里面的食物，估算营养。只输出 JSON，不要任何别的文字。${say ? `\n\n用户补充说明：「${say}」。只看照片很难判断油、酱汁和份量，以这句话为准。` : ""}`;
+  return `${head}
 
 照片可能是：
 A. 一盘饭菜或食堂打的饭：把每样菜分开（比如 米饭、红烧鸡块、炒青菜），按照片里的份量估重量。

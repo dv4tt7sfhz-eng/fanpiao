@@ -3,7 +3,7 @@ import { html, useState, useRef, useEffect, app, commit, UI, Sheet, Seg, Field, 
 import { allFoods, dateStr, dayOf } from "./store.js";
 import { CATS, CK_LABEL, ROLE_LABEL } from "./foods.js";
 import { SLOT_NAME } from "./nutrition.js";
-import { visionReady, visionWhy, visionJSON, snapPrompt, sanitizeSnap, packPrompt, sanitizePack, packToItem, packUnit } from "./ai.js";
+import { aiReady, chatJSON, visionReady, visionWhy, visionJSON, snapPrompt, sanitizeSnap, packPrompt, sanitizePack, packToItem, packUnit } from "./ai.js";
 import { haptic, burst } from "./fx.js";
 import { replanLocal } from "./today.js";
 
@@ -39,6 +39,7 @@ export async function shrink(file, max = 1024) {
 const CAM = html`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-1.8h5.2L15.9 6h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" /><circle cx="12" cy="12.4" r="3.6" /></svg>`;
 const PIC = html`<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2.5" /><circle cx="9" cy="10" r="1.6" /><path d="M5 17l4.5-4.5 3 3 2.5-2.5L19.5 17" /></svg>`;
 
+const SAY_PRESETS = ["食堂一荤两素加一碗米饭", "两个肉包子、一杯豆浆", "一碗牛肉面，加了个卤蛋", "一杯奶茶，三分糖"];
 const LINES = ["正在看照片…", "在找盘子里有什么…", "在估份量…", "在算热量和蛋白…"];
 const PLINES = ["正在找营养成分表…", "在一格一格读数字…", "在把千焦换成千卡…", "在核对数字对不对得上…"];
 const TABLE = html`<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><path d="M8 8h8M8 11.5h8M8 15h5M12.5 8v10" /></svg>`;
@@ -124,7 +125,7 @@ function PackCard({ t, set, warn, shots }) {
 
 export function SnapSheet({ slot: slot0, mode: mode0, onClose }) {
   const S = app.S;
-  const [mode, setMode] = useState(mode0 === "pack" ? "pack" : "meal"); // meal 饭菜 | pack 包装
+  const [mode, setMode] = useState(mode0 === "pack" || mode0 === "say" ? mode0 : "meal"); // meal 饭菜 | pack 包装 | say 说一句
   const [phase, setPhase] = useState("pick"); // pick | front(包装：问要不要拍正面) | scan | result
   const [shots, setShots] = useState([]);
   const [pk, setPk] = useState(null); // 包装读到的表
@@ -134,6 +135,7 @@ export function SnapSheet({ slot: slot0, mode: mode0, onClose }) {
   const [open, setOpen] = useState(-1);
   const [slot, setSlot] = useState(slot0 || "");
   const [ate, setAte] = useState(true);
+  const [desc, setDesc] = useState("");
   const [err, setErr] = useState("");
   const ctl = useRef(null);
   const addRef = useRef(null);
@@ -151,7 +153,7 @@ export function SnapSheet({ slot: slot0, mode: mode0, onClose }) {
     setImg(im); setPhase("scan"); haptic(6);
     ctl.current = new AbortController();
     try {
-      const raw = await visionJSON(app.S, snapPrompt(foods), im, ctl.current.signal);
+      const raw = await visionJSON(app.S, snapPrompt(foods, desc), im, ctl.current.signal);
       const r = sanitizeSnap(raw, app.byId);
       setRes(r); setSel(r.items.map(() => true)); setOpen(-1); setPhase("result");
       if (r.items.length) haptic(12);
@@ -182,6 +184,22 @@ export function SnapSheet({ slot: slot0, mode: mode0, onClose }) {
       haptic(r.ok ? 12 : 6);
     } catch (e) {
       setPhase(list.length > 1 ? "front" : "pick");
+      if (e.code !== "cancelled") setErr(e.message || "AI 暂时用不了，过一会儿再试");
+    }
+  };
+  // 说一句：不拍照，用一句话描述吃了什么，AI 估算
+  const say = async () => {
+    setErr("");
+    if (!desc.trim()) return setErr("先说一句你吃了什么");
+    setImg(null); setPhase("scan"); haptic(6);
+    ctl.current = new AbortController();
+    try {
+      const raw = await chatJSON(app.S, [{ role: "system", content: snapPrompt(foods, desc, true) }, { role: "user", content: desc.trim().slice(0, 300) }], ctl.current.signal);
+      const r = sanitizeSnap(raw, app.byId);
+      setRes(r); setSel(r.items.map(() => true)); setOpen(-1); setPhase("result");
+      if (r.items.length) haptic(12);
+    } catch (e) {
+      setPhase("pick");
       if (e.code !== "cancelled") setErr(e.message || "AI 暂时用不了，过一会儿再试");
     }
   };
@@ -229,13 +247,25 @@ export function SnapSheet({ slot: slot0, mode: mode0, onClose }) {
     setTimeout(onClose, 260);
   };
 
-  return html`<${Sheet} title=${mode === "pack" ? "拍包装加食物" : "拍一下加食物"} onClose=${onClose}>
-    ${phase === "pick" || phase === "front" ? html`<${Seg} id="snap-mode" value=${mode} onChange=${switchMode} options=${[{ v: "meal", n: "饭菜" }, { v: "pack", n: "包装食品" }]} />` : null}
+  return html`<${Sheet} title=${mode === "pack" ? "拍包装加食物" : mode === "say" ? "说一句就能记" : "拍一下加食物"} onClose=${onClose}>
+    ${phase === "pick" || phase === "front" ? html`<${Seg} id="snap-mode" value=${mode} onChange=${switchMode} options=${[{ v: "meal", n: "饭菜" }, { v: "pack", n: "包装食品" }, { v: "say", n: "说一句" }]} />` : null}
+    ${mode === "say" && phase === "pick" ? html`<div class="stack" id="say-pick">
+        <label class="field">吃了什么？像跟朋友说话一样写就行
+          <textarea id="say-text" rows="3" placeholder="例如：一碗麻辣烫，有牛肉丸、豆皮、青菜，少辣少油" value=${desc} onInput=${(e) => setDesc(e.target.value)}></textarea></label>
+        <div class="chips">${SAY_PRESETS.map((a) => html`<button class="chip" onClick=${() => setDesc(a)}>${a}</button>`)}</div>
+        ${aiReady(S) ? html`<button class="btn primary block" id="say-go" disabled=${!desc.trim()} onClick=${say}>AI 估一下</button>`
+          : html`<div class="note warn">还没接入 AI。填一次模型密钥（比如 DeepSeek）就能用。</div>
+            <button class="btn primary block" onClick=${() => UI.open({ t: "aiset" })}>去 AI 设置</button>`}
+        <p class="tiny muted">写得越具体越准：几两、几个、什么做法、油多不多。</p>
+        ${err ? html`<div class="note bad" role="alert" id="snap-err">${err}</div>` : null}
+      </div>` : null}
     ${mode === "meal" && phase === "pick" ? html`<div class="snaphero">
         <div class="lens" aria-hidden="true"><i class="ring r1"></i><i class="ring r2"></i><i class="ring r3"></i><span>${CAM}</span></div>
         <p>拍一盘饭菜、食堂打的饭，AI 会认出是什么、估出热量和蛋白。<br />有包装的食品请切到上面的<b>「包装食品」</b>。</p>
       </div>
-      ${ready ? html`<div class="row">
+      ${ready ? html`<label class="field">补一句描述（可以不写）
+          <input id="snap-desc" placeholder="例如：少油，米饭只吃了一半" value=${desc} onInput=${(e) => setDesc(e.target.value)} /></label>
+        <div class="row">
           <button class="btn primary grow icon" id="snap-cam" onClick=${() => go(true)}>${CAM}拍照</button>
           <button class="btn grow icon" id="snap-pick" onClick=${() => go(false)}>${PIC}从相册选</button>
         </div>
@@ -291,10 +321,12 @@ export function SnapSheet({ slot: slot0, mode: mode0, onClose }) {
         ${pk.ok ? html`<button class="btn primary grow" id="pack-add" ref=${addRef} onClick=${() => { if (!pk.t.name.trim()) return setErr("名字不能空着"); save([packToItem(pk.t)]); }}>加入食物库</button>` : null}
       </div>
     </div>` : null}
-    ${phase === "scan" ? html`<${Scan} img=${img} onStop=${stop} lines=${mode === "pack" ? PLINES : LINES} />` : null}
+    ${phase === "scan" && img ? html`<${Scan} img=${img} onStop=${stop} lines=${mode === "pack" ? PLINES : LINES} />` : null}
+    ${phase === "scan" && !img ? html`<div class="snapscan" id="snap-scan"><div class="aibusy">AI 正在估算<span class="dots"><i></i><i></i><i></i></span><div class="small muted">「${desc.trim().slice(0, 40)}」</div></div>
+      <button class="btn block" id="snap-stop" onClick=${stop}>停止</button></div>` : null}
 
-    ${mode === "meal" && phase === "result" ? html`<div class="snapres">
-      <div class="thumbrow"><img src=${img.url} alt="你拍的照片" /><div>
+    ${(mode === "meal" || mode === "say") && phase === "result" ? html`<div class="snapres">
+      <div class="thumbrow">${img ? html`<img src=${img.url} alt="你拍的照片" />` : null}<div>
         <b>${res.items.length ? `认出 ${res.items.length} 样` : "没认出食物"}</b>
         ${res.note ? html`<span class="small muted">${res.note}</span>` : null}</div></div>
       ${res.items.length ? html`
@@ -305,11 +337,11 @@ export function SnapSheet({ slot: slot0, mode: mode0, onClose }) {
             <${Seg} id="snap-slot" value=${slot} onChange=${setSlot} options=${[{ v: "", n: "不记" }, { v: "b", n: "早" }, { v: "l", n: "午" }, { v: "d", n: "晚" }, { v: "s", n: "加餐" }]} /></div>
           ${slot ? html`<label class="switch"><span>已经吃了（直接打勾）</span><input type="checkbox" id="snap-ate" checked=${ate} onChange=${(e) => setAte(e.target.checked)} /></label>` : null}
         </div>
-        <p class="tiny muted">数字是 AI 根据照片估的，可能差 20% 左右。有包装的话，以包装上的营养成分表为准。</p>`
-      : html`<p class="muted">换个角度、离近一点再拍一张试试。</p>`}
+        <p class="tiny muted">数字是 AI 根据${mode === "say" ? "你的描述" : "照片"}估的，可能差 20% 左右。有包装的话，以包装上的营养成分表为准。</p>`
+      : html`<p class="muted">${mode === "say" ? "没看出吃了什么。写具体一点再试，比如几个、几两、什么做法。" : "换个角度、离近一点再拍一张试试。"}</p>`}
       ${err ? html`<div class="note bad" role="alert">${err}</div>` : null}
       <div class="row">
-        <button class="btn" id="snap-again" onClick=${() => { setPhase("pick"); setErr(""); }}>重拍</button>
+        <button class="btn" id="snap-again" onClick=${() => { setPhase("pick"); setErr(""); }}>${mode === "say" ? "改一下" : "重拍"}</button>
         ${res.items.length ? html`<button class="btn primary grow" id="snap-add" ref=${addRef} disabled=${!n} onClick=${() => save()}>${n ? `加入 ${n} 样` : "先勾一样"}</button>` : null}
       </div>
     </div>` : null}

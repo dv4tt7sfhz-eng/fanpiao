@@ -1,12 +1,13 @@
 // 「我的」页：资料和目标、AI 设置、云端（预留）、数据、说明
 import { html, useState, app, commit, UI, Sheet, Seg, Field, num, copyText, MODE } from "./ui.js";
+import { planOf } from "./plans.js";
 import { targetsOf, GOALS, ACTIVITY } from "./nutrition.js";
 import { BasicForm, LifeForm, toProfile, checkProfile } from "./onboarding.js";
 import { PROVIDERS, providerOf, chatJSON, hasPreviewAI, aiReady } from "./ai.js";
 import { cloud, exportable } from "./api.js";
 import { blank, wipe, save } from "./store.js";
 
-export const VERSION = "1.7.1";
+export const VERSION = "1.8.0";
 
 export function Me() {
   const S = app.S, p = S.profile, T = targetsOf(p);
@@ -25,6 +26,7 @@ export function Me() {
       <button class="btn block" id="btn-profile" style="margin-top:12px" onClick=${() => UI.open({ t: "profile" })}>修改</button>
     </div>
     <div class="card" style="padding-block:4px">
+      <button class="nav" id="nav-plan" onClick=${() => UI.open({ t: "plan" })}><span class="ic i-plan" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19V13M10 19V8M15 19v-4M20 19V5" /></svg></span><b>饮食计划</b><span>${S.cycle ? (S.cycle.name || planOf(S.cycle.id).n) : "稳稳来"} ›</span></button>
       <button class="nav" id="nav-ai" onClick=${() => UI.open({ t: "aiset" })}><span class="ic i-ai" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" /></svg></span><b>AI 设置</b><span>${aiState} ›</span></button>
       <button class="nav" id="nav-aiimport" onClick=${() => UI.open({ t: "aiimport" })}><span class="ic i-fill" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 19l9.5-9.5M14.5 9.5l2-2a1.4 1.4 0 0 1 2 2l-2 2M17 3v2M21 7h-2M19.5 4.5 18 6M9 4l.6 1.6L11 6l-1.4.4L9 8l-.6-1.6L7 6l1.4-.4z" /></svg></span><b>让 AI 帮你填</b><span>任何 AI 都行 ›</span></button>
       <button class="nav" id="nav-cloud" onClick=${() => UI.open({ t: "cloud" })}><span class="ic i-cloud" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 18h10.5a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 7.3 9.6 4.2 4.2 0 0 0 7 18z" /></svg></span><b>云端账号和备份</b><span>${S.cloud.token ? "已登录 " + S.cloud.user : "预留功能，未连接"} ›</span></button>
@@ -249,6 +251,8 @@ export function AboutSheet({ onClose }) {
       <p>食物的热量和营养是常见食物的典型值，实际会因品牌、做法、分量而不同。AI 估算的数值可能不准，请以食品包装上的营养成分表为准。</p>
       <p>如果你有糖尿病、肾病、痛风等慢性病，正在怀孕或哺乳，未满 18 岁，或者有过进食障碍，请在医生或营养师指导下安排饮食。未满 18 岁的用户不提供减脂目标。</p>
       <p>过敏原请自己核对食物配料表。</p>
+      <p>饮食计划里的碳循环、211 餐盘法、16+8 轻断食，是按网上常见的做法整理的，不代表任何博主本人。轻断食不适合未满 18 岁、孕期哺乳期、有胃病或进食障碍史的人。</p>
+      <p>食物库（1700 种，每 100 克）的数据来自开源项目 cn-food-mcp（MIT 许可），原始数据整理自《中国食物成分表》。</p>
     </div>
   <//>`;
 }
