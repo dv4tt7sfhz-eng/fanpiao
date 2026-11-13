@@ -21,7 +21,12 @@ export function FoodsView() {
     <div class="top"><div><h1>食物</h1><p class="sub">勾上的才会排进饭里。现在勾了 <b class="num">${nOn}</b> 样。</p></div></div>
     <button class="snapcta" id="btn-snap" onClick=${() => UI.open({ t: "snap" })}>
       <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.3-1.8h5.2L15.9 6h1.6A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z" /><circle cx="12" cy="12.4" r="3.6" /></svg></span>
-      <span class="tx"><b>拍一下加食物</b><span>拍饭菜、包装或营养成分表，AI 帮你填好</span></span>
+      <span class="tx"><b>拍一下加食物</b><span>拍饭菜，AI 认出来、帮你估好</span></span>
+      <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+    </button>
+    <button class="snapcta pack" id="btn-pack" onClick=${() => UI.open({ t: "snap", mode: "pack" })}>
+      <span class="ic" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><path d="M8 8h8M8 11.5h8M8 15h5M12.5 8v10" /></svg></span>
+      <span class="tx"><b>拍包装加食物</b><span>拍营养成分表，照着表上的数字记</span></span>
       <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
     </button>
     <div class="row">
@@ -33,7 +38,7 @@ export function FoodsView() {
     <div class="card"><div class="list">
       ${list.map((f) => html`<div class="lrow" key=${f.id}>
         <button class="main" onClick=${() => UI.open({ t: "food", id: f.id })}>
-          <b>${f.n} ${f.custom ? html`<span class="tag">${f.snap ? "拍照加的" : "自己加的"}</span>` : null}${(f.na || 0) >= 600 ? html` <span class="tag na">高钠</span>` : null}${(f.fb || 0) >= 4 ? html` <span class="tag fb">高纤维</span>` : null}</b>
+          <b>${f.n} ${f.custom ? html`<span class="tag">${f.pack ? "营养表" : f.snap ? "拍照加的" : "自己加的"}</span>` : null}${(f.na || 0) >= 600 ? html` <span class="tag na">高钠</span>` : null}${(f.fb || 0) >= 4 ? html` <span class="tag fb">高纤维</span>` : null}</b>
           <span class="num">每${f.u}：${r0(f.k)} 千卡　蛋白 ${f.p}g　¥${yuan(f.$)}　${f.out ? "外食" : CK_LABEL[f.ck]}</span>
         </button>
         <button class="tog" aria-label=${"勾选 " + f.n} aria-pressed=${String(!!f.on)} onClick=${() => toggle(f)}></button>
@@ -67,7 +72,8 @@ export function FoodSheet({ id, onClose }) {
     commit((S) => {
       if (builtin) S.pantry[id] = { ...(S.pantry[id] || {}), ...v, on: f.on };
       else {
-        const rec = { id: id || "u" + Date.now().toString(36), n: f.n.trim(), u: f.u.trim() || "份", c: f.c, ...v, ck: f.ck, r: f.r, s: f.s, on: f.on, out: f.c === "食堂外食" };
+        const rec = { id: id || "u" + Date.now().toString(36), n: f.n.trim(), u: f.u.trim() || "份", c: f.c, ...v, ck: f.ck, r: f.r, s: f.s, on: f.on, out: f.c === "食堂外食",
+          ...(cur && cur.snap ? { snap: true } : {}), ...(cur && cur.pack ? { pack: true } : {}) };
         const i = S.custom.findIndex((x) => x.id === rec.id);
         if (i >= 0) S.custom[i] = rec; else S.custom.push(rec);
       }
@@ -94,6 +100,9 @@ export function FoodSheet({ id, onClose }) {
     finally { setBusy(false); }
   };
   return html`<${Sheet} title=${cur ? cur.n : "自己加食物"} onClose=${onClose}>
+    ${cur ? null : html`<button class="pkghint" id="fd-pack" onClick=${() => UI.open({ t: "snap", mode: "pack" })}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5" /><path d="M8 8h8M8 11.5h8M8 15h5M12.5 8v10" /></svg>
+      <span>有包装的食品，不同牌子成分差很多，<b>拍营养成分表</b>直接照着表记，比手填准。</span></button>`}
     <div class="card stack">
       ${builtin ? null : html`<${Field} id="fd-name" label="名字" value=${f.n} onInput=${(v) => set({ n: v })} placeholder="例如：XX 牌鸡胸肉肠" />
         <div class="grid2">

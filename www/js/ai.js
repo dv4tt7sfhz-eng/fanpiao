@@ -120,10 +120,12 @@ export async function chatJSON(s, messages, signal, opt = {}) {
 }
 
 // 带一张照片问模型，拿回 JSON。img: {url: dataURL, blob}
+// img 可以是一张，也可以是几张（包装：营养成分表 + 正面）
 export async function visionJSON(s, text, img, signal) {
   const v = visionCfg(s);
+  const imgs = (Array.isArray(img) ? img : [img]).slice(0, 2);
   if (!v.key && v.provider !== "server" && previewSample && previewImages) {
-    try { return await previewSample.json(text, { images: [img.blob], signal, cache: false, modelTier: "default" }); }
+    try { return await previewSample.json(text, { images: imgs.map((x) => x.blob), signal, cache: false, modelTier: "default" }); }
     catch (e) {
       if (e && e.code === "cancelled") throw new AIError("已停止。", "cancelled");
       throw new AIError(e && e.code === "not_granted" ? "没有允许预览页面使用 Claude。" : "预览里的 Claude 暂时看不了图，过一会儿再试。", "preview");
@@ -131,7 +133,7 @@ export async function visionJSON(s, text, img, signal) {
   }
   const why = visionWhy(s);
   if (why) throw new AIError(why, "nokey");
-  const content = [{ type: "text", text }, { type: "image_url", image_url: { url: img.url } }];
+  const content = [{ type: "text", text }, ...imgs.map((x) => ({ type: "image_url", image_url: { url: x.url } }))];
   const msgs = [{ role: "user", content }];
   const fake = { ...s, ai: { provider: v.provider, base: v.base, key: v.key, model: v.model } };
   return chatJSON(fake, msgs, signal, { vision: true });
@@ -188,7 +190,7 @@ export function snapPrompt(foods) {
 
 照片可能是：
 A. 一盘饭菜或食堂打的饭：把每样菜分开（比如 米饭、红烧鸡块、炒青菜），按照片里的份量估重量。
-B. 包装食品的正面：认出是什么，按常见品牌的典型值估。
+B. 包装食品的正面：认出是什么，按常见品牌的典型值估，sure 不要超过 0.4，pkg 写 true（不同牌子差别很大，App 会提醒用户去拍营养成分表）。
 C. 包装上的「营养成分表」：直接读表上的数字，不要估。表上一般是每 100g 或每份，单位就照表写。
 
 用户已有的食物库（id|名称|单位）。如果照片里的东西和库里某一样是同一种，就在 match 里填它的 id，qty 按库里的单位算：
@@ -209,12 +211,13 @@ ${lib}
 - out：是不是食堂或外面买的现成饭菜（true/false）
 - match：库里同一种食物的 id，没有就写 null
 - label：数字是不是从营养成分表上读的（true/false）
+- pkg：是不是有包装的食品（true/false）
 - sure：你有多确定，0 到 1
 
 最多 6 样。看不出是食物就让 items 为空。
 
 输出格式：
-{"items":[{"n":"","u":"","qty":1,"k":0,"p":0,"f":0,"cb":0,"na":0,"fb":0,"price":0,"c":"","r":"","ck":0,"s":"ld","out":false,"match":null,"label":false,"sure":0.8}],"note":"一句简单中文：认出了什么，哪里不确定"}`;
+{"items":[{"n":"","u":"","qty":1,"k":0,"p":0,"f":0,"cb":0,"na":0,"fb":0,"price":0,"c":"","r":"","ck":0,"s":"ld","out":false,"match":null,"label":false,"pkg":false,"sure":0.8}],"note":"一句简单中文：认出了什么，哪里不确定"}`;
 }
 
 const ROLES_OK = ["staple", "protein", "veg", "fruit", "dairy", "fat", "meal"];
@@ -238,11 +241,95 @@ export function sanitizeSnap(raw, byId) {
       c: out ? "食堂外食" : CATS.includes(x.c) ? x.c : CAT_OF_ROLE[r],
       r, ck: [0, 1, 2].includes(Number(x.ck)) ? Number(x.ck) : 0,
       s: s || (r === "fruit" || r === "dairy" || r === "fat" ? "bs" : "ld"),
-      out, label: x.label === true, sure: Math.max(0, Math.min(1, Number(x.sure) || 0.6)),
+      out, label: x.label === true, pkg: x.pkg === true && x.label !== true, sure: Math.max(0, Math.min(1, Number(x.sure) || 0.6)),
       match: m ? m.id : null,
     };
     if (m) { it.u = m.u; }
     return it.n ? it : null;
   }).filter(Boolean);
   return { items, note: typeof (raw && raw.note) === "string" ? raw.note.slice(0, 160) : "" };
+}
+
+// ---------- 包装食品：只读包装上的「营养成分表」 ----------
+// 不同牌子差别很大，所以这里不让 AI 估，只让它照着表抄数字；换算和核对在下面用代码做。
+export function packPrompt(two) {
+  return `你是包装食品「营养成分表」的读取助手。${two ? "第 1 张图是营养成分表，第 2 张是包装正面。" : "图里是包装上的营养成分表。"}只输出 JSON，不要任何别的文字。
+
+规则：
+1. 只照着表上印的数字抄，绝对不要估算、不要凭经验改。看不清的那一项写 null。
+2. 先看表头是「每100克」「每100毫升」还是「每份（xx克）」，写进 basis 和 basisAmt。
+3. 能量：表上写的是千焦(kJ)就填 energyKJ；写的是千卡(kcal)就填 energyKcal；两个都有就都填。
+4. 钠的单位是毫克(mg)。如果表上写的是克，换成毫克。
+5. 表上没有「膳食纤维」这一行，fb 写 null。
+6. 净含量：包装上写的整包重量（「净含量」），只写数字；单位写 g 或 ml。看不到就写 null。
+7. 名字：从包装上读，品牌加品名，比如「伊利 安慕希原味酸奶」。看不到正面就按表和图里的字起一个简短的名字。
+8. 图里根本没有营养成分表：found 写 false，其他可以不填。
+
+字段：
+- found：有没有看到营养成分表
+- name：名字
+- basis："100g"、"100ml" 或 "serving"
+- basisAmt：表头那一份是多少克或毫升（每100克就是 100；每份30克就是 30）
+- energyKJ、energyKcal、p(蛋白质 g)、f(脂肪 g)、cb(碳水化合物 g)、na(钠 mg)、fb(膳食纤维 g)：都是表上「每 basisAmt」的数字
+- net：净含量数字；netUnit："g" 或 "ml"
+- form：包装是什么样的，只能是 袋、盒、瓶、罐、包、根、杯、个 之一
+- price：在中国大陆买一整包大约多少元（这个可以估）
+- c：分类，只能是 ${CATS.join("、")} 里的一个
+- r：staple(主食) protein(蛋白) veg(蔬菜) fruit(水果) dairy(奶豆) fat(坚果油脂) meal(一整份套餐) 之一
+- ck：0=即食 1=要热水 2=要开火
+- s：适合哪几餐，b(早) l(午) d(晚) s(加餐) 组合
+- note：一句简单中文，哪一项看不清就说哪一项
+
+输出格式：
+{"found":true,"name":"","basis":"100g","basisAmt":100,"energyKJ":null,"energyKcal":null,"p":0,"f":0,"cb":0,"na":0,"fb":null,"net":null,"netUnit":"g","form":"袋","price":0,"c":"","r":"","ck":0,"s":"bs","note":""}`;
+}
+
+const nn = (x, max) => { if (x === null || x === undefined || x === "") return null; const v = Number(x); return Number.isFinite(v) && v >= 0 ? Math.min(max, Math.round(v * 10) / 10) : null; };
+const FORMS = ["袋", "盒", "瓶", "罐", "包", "根", "杯", "个"];
+
+// 整理模型读到的表，返回一张「表」（按表头那一份）和要提醒的地方
+export function sanitizePack(raw) {
+  if (!raw || typeof raw !== "object" || raw.found === false) return { ok: false, note: typeof (raw && raw.note) === "string" ? raw.note.slice(0, 120) : "" };
+  const ml = raw.basis === "100ml" || raw.netUnit === "ml";
+  const basisAmt = nn(raw.basisAmt, 2000) || 100;
+  const kj = nn(raw.energyKJ, 20000), kc0 = nn(raw.energyKcal, 5000);
+  const p = nn(raw.p, 300), f = nn(raw.f, 300), cb = nn(raw.cb, 500), na = nn(raw.na, 50000), fb = nn(raw.fb, 100);
+  const warn = [];
+  // 千焦换千卡：1 千卡 = 4.184 千焦
+  let kcal = kc0 != null ? kc0 : kj != null ? Math.round(kj / 4.184) : null;
+  const est = Math.round(4 * (p || 0) + 9 * (f || 0) + 4 * (cb || 0) + 2 * (fb || 0));
+  if (kcal == null) { kcal = est; warn.push("没读到能量，先按蛋白、脂肪、碳水算了一个，最好对照包装改一下。"); }
+  else if (kcal > 40 && Math.abs(est - kcal) / kcal > 0.25) warn.push(`能量（${kcal} 千卡）和蛋白、脂肪、碳水对不上，可能有个数字没读准，请对照照片看一下。`);
+  const miss = [["蛋白质", p], ["脂肪", f], ["碳水", cb], ["钠", na]].filter(([, v]) => v == null).map(([n]) => n);
+  if (miss.length) warn.push(`${miss.join("、")}没看清，先当 0，请对照包装填上。`);
+  const r = ROLES_OK.includes(raw.r) ? raw.r : "staple";
+  const s = typeof raw.s === "string" ? [...new Set(raw.s.replace(/[^blds]/g, ""))].join("") : "";
+  const net = nn(raw.net, 50000);
+  const t = {
+    name: String(raw.name || "").trim().slice(0, 24) || "包装食品",
+    unitOf: ml ? "ml" : "g", basis: raw.basis === "serving" ? "serving" : ml ? "100ml" : "100g", basisAmt,
+    kj, kcal, p: p || 0, f: f || 0, cb: cb || 0, na: Math.round(na || 0), fb: fb || 0, fbListed: fb != null,
+    net, form: FORMS.includes(raw.form) ? raw.form : "包", price: nn(raw.price, 2000) || 0,
+    // 一个单位：整包不太大就按整包算，太大（比如 5kg 米）就按 100g 算
+    whole: !!(net && net <= 1000),
+    c: CATS.includes(raw.c) ? raw.c : CAT_OF_ROLE[r], r, ck: [0, 1, 2].includes(Number(raw.ck)) ? Number(raw.ck) : 0,
+    s: s || (r === "dairy" || r === "fat" || r === "fruit" ? "bs" : "ld"),
+  };
+  return { ok: true, t, warn, note: typeof raw.note === "string" ? raw.note.slice(0, 120) : "" };
+}
+
+// 表 → 食物库里的一样食物（按「一个单位」换算）
+export function packUnit(t) {
+  const amt = t.whole && t.net ? t.net : 100;
+  const u = t.whole && t.net ? `${t.form}(${t.net}${t.unitOf})` : `100${t.unitOf}`;
+  return { amt, u, k: amt / (t.basisAmt || 100) };
+}
+export function packToItem(t) {
+  const { u, k } = packUnit(t);
+  const m = (v, d = 1) => Math.round(v * k * 10 ** d) / 10 ** d;
+  return {
+    n: t.name, u, qty: 1, k: Math.round(t.kcal * k), p: m(t.p), f: m(t.f), cb: m(t.cb), na: Math.round(t.na * k), fb: m(t.fb),
+    $: t.whole ? t.price : Math.round((t.price && t.net ? t.price * (100 / t.net) : 0) * 10) / 10,
+    c: t.c, r: t.r, ck: t.ck, s: t.s, out: false, label: true, pack: true, sure: 1, match: null,
+  };
 }

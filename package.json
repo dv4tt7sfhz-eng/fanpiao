@@ -1,6 +1,6 @@
 {
   "name": "fanpiao",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "private": true,
   "description": "饭票：按预算、按热量排好每天健身餐的 App",
   "scripts": {

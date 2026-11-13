@@ -55,28 +55,6 @@ function streakOf(S, today) {
 }
 
 
-// 圆环：Apple「健身记录」那种。q = 完成的比例（可以超过 1，超过的部分再绕一圈）
-const RING = { kcal: ["#fa114f", "#ff5f8f"], p: ["#5fd400", "#b4ff3a"], cb: ["#00b5e2", "#62f0ff"] };
-function Ring({ k, r, q, qp, drawn, i }) {
-  const C = 2 * Math.PI * r, [c1, c2] = RING[k];
-  const v = drawn ? q : 0, vp = drawn ? qp : 0;
-  const t = `${1.5 + i * 0.12}s`, d = `${0.1 + i * 0.14}s`;
-  const tr = `stroke-dashoffset ${t} var(--out) ${d}`;
-  return html`<g class=${"ring r-" + k + (q >= 1 ? " full" : "")}>
-    <defs><linearGradient id=${"rg-" + k} x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color=${c1} /><stop offset="1" stop-color=${c2} /></linearGradient></defs>
-    <circle class="trk" cx="100" cy="100" r=${r} stroke=${c1} />
-    <circle class="pln" cx="100" cy="100" r=${r} stroke=${c1} transform="rotate(-90 100 100)"
-      style=${`stroke-dasharray:${C};stroke-dashoffset:${C * (1 - Math.min(1, vp))};transition:${tr}`} />
-    <circle class="val" cx="100" cy="100" r=${r} stroke=${`url(#rg-${k})`} transform="rotate(-90 100 100)"
-      style=${`stroke-dasharray:${C};stroke-dashoffset:${C * (1 - Math.min(1, v))};transition:${tr}`} />
-    ${q > 1 ? html`<circle class="val" cx="100" cy="100" r=${r} stroke=${c2} transform="rotate(-90 100 100)"
-      style=${`stroke-dasharray:${C};stroke-dashoffset:${C * (1 - Math.min(1, Math.max(0, v - 1)))};transition:${tr}`} />` : null}
-    <g class="cap" style=${`transform:rotate(${360 * Math.min(2, v)}deg);transition:transform ${t} var(--out) ${d}`}>
-      <circle cx="100" cy=${100 - r} r="9.6" fill=${q >= 0.97 ? c2 : "none"} />
-    </g>
-  </g>`;
-}
-
 function Hero({ S, day, T, tp, te, plan, byId, onAct, act }) {
   const now = new Date();
   const [drawn, setDrawn] = useState(false);
@@ -97,44 +75,49 @@ function Hero({ S, day, T, tp, te, plan, byId, onAct, act }) {
   const allDone = items.length > 0 && items.every((it) => it.done);
   const streak = streakOf(S, dateStr());
   const q = (a, b) => (b > 0 ? a / b : 0);
-  const rows = [
-    { k: "kcal", n: "热量", e: te.kcal, t: T.kcal, u: "千卡", id: "kcal-eaten", tid: "kcal-target" },
-    { k: "p", n: "蛋白质", e: te.p, t: T.protein, u: "克" },
-    { k: "cb", n: "碳水", e: te.cb, t: T.carb, u: "克" },
+  const kq = (v, t) => (drawn ? Math.max(0, Math.min(1, q(v, t))) : 0).toFixed(3);
+  const tiles = [
+    { k: "p", n: "蛋白质", e: te.p, pl: tp.p, t: T.protein },
+    { k: "cb", n: "碳水", e: te.cb, pl: tp.cb, t: T.carb },
+    { k: "f", n: "脂肪", e: te.f, pl: tp.f, t: T.fat },
   ];
-  const fatQ = Math.min(1, q(te.f, T.fat)), fatP = Math.min(1, q(tp.f, T.fat));
-  return html`<section class=${"hero main rh tod-" + skyOf(now.getHours())} ref=${box} aria-label="今天的进度"
+  // 吃的东西变了：泡泡挤扁一下，进度条上扫过一道光
+  const track = useRef(null), lastE = useRef(null);
+  useEffect(() => {
+    const el = track.current; if (!el || !drawn) return;
+    if (lastE.current === te.kcal) return;
+    lastE.current = te.kcal;
+    el.classList.remove("go"); void el.offsetWidth; el.classList.add("go");
+  }, [te.kcal, drawn]);
+  const say = allDone ? "今天的都吃完了，做得好" : left > 0 ? "今天还可以吃" : "今天吃够了，剩下的可以不吃";
+  return html`<section class=${"hero main cov tod-" + skyOf(now.getHours())} ref=${box} aria-label="今天的进度"
       onPointerDown=${tilt} onPointerMove=${(e) => { if (e.buttons || e.pointerType === "touch") tilt(e); }} onPointerUp=${untilt} onPointerLeave=${untilt} onPointerCancel=${untilt}>
-    <div class="aura" aria-hidden="true"><i class="a1"></i><i class="a2"></i></div>
-    <div class="hhead">
-      <span class="cat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5c.9 3.5 5.8 5.6 5.8 11.2A5.8 5.8 0 0 1 6.2 13.7c0-2.6 1.3-4.2 2.6-5.4.2 1.9 1.1 3 2.2 3.5 0-3.7 0-6.2 1-9.3z" /></svg>今天</span>
+    <div class="mesh" aria-hidden="true"><i class="m1"></i><i class="m2"></i><i class="m3"></i><i class="m4"></i></div>
+    <div class="cshade" aria-hidden="true"></div>
+    <div class="ctop">
       <span class="hdate">${now.getMonth() + 1}月${now.getDate()}日 周${WEEK[now.getDay()]}</span>
-      <button class="pill" id="goal-chip" onClick=${() => UI.open({ t: "target" })}>${GOALS[T.goal].n}目标
+      <button class="cchip gl" id="goal-chip" onClick=${() => UI.open({ t: "target" })}>${GOALS[T.goal].n}目标
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg></button>
     </div>
-    <p class="hsay" key=${allDone ? "a" : left > 0 ? "l" : "f"}>${allDone ? "今天的都吃完了，做得好。" : left > 0 ? html`还可以吃 <b class="num">${r0(left).toLocaleString("en-US")}</b> 千卡。` : "今天吃够了，剩下的可以不吃。"}</p>
-    <div class="hline"></div>
-    <div class="rings">
-      <svg class="rsvg" viewBox="0 0 200 200" aria-hidden="true">
-        <defs><filter id="capsh" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="2.6" flood-color="#000" flood-opacity=".55" /></filter></defs>
-        <${Ring} k="kcal" r=${86} i=${0} q=${q(te.kcal, T.kcal)} qp=${q(tp.kcal, T.kcal)} drawn=${drawn} />
-        <${Ring} k="p" r=${64} i=${1} q=${q(te.p, T.protein)} qp=${q(tp.p, T.protein)} drawn=${drawn} />
-        <${Ring} k="cb" r=${42} i=${2} q=${q(te.cb, T.carb)} qp=${q(tp.cb, T.carb)} drawn=${drawn} />
-      </svg>
-      <div class="rlist">
-        ${rows.map((x, i) => html`<div class=${"rrow r-" + x.k} style=${`--i:${i}`}>
-          <span class="rn">${x.n}</span>
-          <span class="rv num"><b><${Roll} value=${x.e} id=${x.id} /></b><em>/${x.tid ? html`<span id=${x.tid}>${T.kcal}</span>` : r0(x.t)}</em><small>${x.u}</small></span>
-        </div>`)}
-        <div class="rrow r-f" style="--i:3"><span class="rn">脂肪 <span class="num">${r0(te.f)}/${r0(T.fat)}</span> 克</span>
-          <span class="fbar"><i class="pl" style=${`width:${drawn ? fatP * 100 : 0}%`}></i><i class="ea" style=${`width:${drawn ? fatQ * 100 : 0}%`}></i></span></div>
-      </div>
+    <div class="cbig">
+      <span class="lab" key=${say}>${say}</span>
+      <div class="row"><b class="num"><${Roll} value=${left} id="kcal-left" /></b><em>千卡</em></div>
     </div>
-    <div class="hline"></div>
+    <div class="ctrack gl" ref=${track} style=${`--v:${kq(te.kcal, T.kcal)};--vp:${kq(tp.kcal, T.kcal)}`}>
+      <div class="clip"><i class="plan"></i><i class="fill"></i></div><div class="kw"><i class="knob"></i></div>
+    </div>
+    <div class="ctl"><span>已吃 <b class="num"><${Roll} value=${te.kcal} id="kcal-eaten" /></b></span><span>目标 <span class="num" id="kcal-target">${T.kcal.toLocaleString("en-US")}</span> 千卡</span></div>
+    <div class="ctiles">
+      ${tiles.map((x, i) => html`<div class=${"ctile gl" + (x.e >= x.t && x.t > 0 ? " full" : "")} style=${`--i:${i};--v:${kq(x.e, x.t)};--vp:${kq(x.pl, x.t)}`}>
+        <span class="tn">${x.n}</span>
+        <span class="tv"><b class="num"><${Roll} value=${x.e} /></b><em>/${r0(x.t)} 克</em></span>
+        <span class="bar"><i class="pl"></i><i class="ea"></i></span>
+      </div>`)}
+    </div>
     <div class="hfoot">
-      <div class="stat"><span>今天安排</span><b class="num"><span id="kcal-plan">${r0(tp.kcal)}</span><small>千卡</small></b></div>
-      <div class="stat"><span>${S.prefs.budget > 0 ? "花费 / 预算 ¥" + S.prefs.budget : "花费"}</span><b class="num" id="cost-plan">¥${yuan(tp.cost)}</b></div>
-      <label class="stat"><span>手表活动千卡</span>
+      <div class="stat gl"><span>今天安排</span><b class="num"><span id="kcal-plan">${r0(tp.kcal)}</span><small>千卡</small></b></div>
+      <div class="stat gl"><span>${S.prefs.budget > 0 ? "花费/预算" + S.prefs.budget : "花费"}</span><b class="num" id="cost-plan">¥${yuan(tp.cost)}</b></div>
+      <label class="stat gl"><span>手表活动千卡</span>
         <input id="act-kcal" class="num" type="text" inputmode="numeric" placeholder="不填" value=${act} onInput=${(e) => onAct(e.target.value)} /></label>
     </div>
     ${streak > 1 ? html`<div class="streak"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c.8 3.2 5 5 5 10a5 5 0 0 1-10 0c0-2.2 1.1-3.6 2.2-4.6.2 1.6 1 2.6 1.9 3 0-3.2 0-5.4.9-8.4z" /></svg>已经连续记录 <b class="num">${streak}</b> 天</div>` : null}

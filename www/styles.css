@@ -989,3 +989,148 @@ button,label.switch,.chip,.nav,.lrow .main,[role="button"]{touch-action:manipula
 .tabs button.hot svg{fill:currentColor;fill-opacity:.18;transform:scale(1.08)}
 @media (prefers-reduced-motion:reduce){.tabs .in.press .bubble{transform:none}.tabs .thumb{transition:transform .2s ease}.tabs button.hot svg{transform:none}}
 @media (prefers-reduced-transparency:reduce){.tabs .bubble{-webkit-backdrop-filter:none;backdrop-filter:none;background:var(--card)}}
+
+/* ---------- 1.6.1 首页彩色封面卡（学 Apple Music 首页的大封面） ----------
+   背景是慢慢流动的四团颜色；按时间换四套：早晨、白天、傍晚、夜里。
+   上面压着半透明的玻璃片（目标按钮、进度槽、三块小卡、底下三格），都有专辑封面那圈细亮边。 */
+.hero.cov{--g1:#ff9a3d;--g2:#ff3b5c;--g3:#7a34e0;--g4:#2a2170;
+  color:#fff;padding:18px 18px 16px;border-radius:30px;display:flex;flex-direction:column;gap:14px;
+  background:linear-gradient(160deg,var(--g1),var(--g2) 45%,var(--g3) 80%,var(--g4));
+  box-shadow:0 18px 40px -14px color-mix(in srgb,var(--g2) 55%,transparent),0 2px 6px rgba(0,0,0,.08)}
+.hero.cov.tod-dawn{--g1:#ffc46b;--g2:#ff7e6e;--g3:#d14fa8;--g4:#5b3fc4}
+.hero.cov.tod-day{--g1:#38c8ff;--g2:#2f7df6;--g3:#5a45e6;--g4:#27206b}
+.hero.cov.tod-dusk{--g1:#ff9a3d;--g2:#ff3b5c;--g3:#7a34e0;--g4:#2a2170}
+.hero.cov.tod-night{--g1:#3a4bd8;--g2:#6a35c9;--g3:#2b1d6e;--g4:#0c0b2e}
+.hero.cov .mesh{position:absolute;inset:-20%;z-index:-3;filter:blur(38px) saturate(125%);pointer-events:none}
+.hero.cov .mesh i{position:absolute;border-radius:50%;opacity:.9;will-change:transform}
+.hero.cov .mesh .m1{width:62%;height:62%;left:-6%;top:-10%;background:var(--g1);animation:cd1 16s ease-in-out infinite alternate}
+.hero.cov .mesh .m2{width:58%;height:58%;right:-8%;top:8%;background:var(--g2);animation:cd2 19s ease-in-out infinite alternate}
+.hero.cov .mesh .m3{width:66%;height:66%;left:10%;bottom:-18%;background:var(--g3);animation:cd3 22s ease-in-out infinite alternate}
+.hero.cov .mesh .m4{width:46%;height:46%;right:2%;bottom:-6%;background:var(--g4);animation:cd1 25s ease-in-out infinite alternate-reverse}
+@keyframes cd1{to{transform:translate(18%,14%) scale(1.18)}}
+@keyframes cd2{to{transform:translate(-22%,18%) scale(.88)}}
+@keyframes cd3{to{transform:translate(14%,-16%) scale(1.12)}}
+.hero.cov .cshade{position:absolute;inset:0;z-index:-2;pointer-events:none;background:linear-gradient(to top,rgba(0,0,0,.3),rgba(0,0,0,.04) 60%,rgba(0,0,0,.1))}
+/* 手指按住时指尖下的那团光：盖在颜色上面 */
+.hero.cov::before{z-index:-1;background:radial-gradient(220px circle at var(--mx,50%) var(--my,30%),rgba(255,255,255,.28),transparent 62%)}
+/* 专辑封面那圈玻璃亮边 */
+.hero.cov::after,.hero.cov .gl::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:5;display:block;
+  background:linear-gradient(150deg,rgba(255,255,255,.85),rgba(255,255,255,.14) 28%,rgba(255,255,255,.04) 55%,rgba(255,255,255,.5));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+/* 玻璃片 */
+.hero.cov .gl{position:relative;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.09));
+  -webkit-backdrop-filter:blur(18px) saturate(170%) brightness(1.06);backdrop-filter:blur(18px) saturate(170%) brightness(1.06);
+  box-shadow:inset 0 1px 1px -.5px rgba(255,255,255,.7),inset 0 -8px 12px -10px rgba(0,0,0,.25),0 4px 14px rgba(0,0,0,.1)}
+.hero.cov .ctop{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.hero.cov .hdate{font-size:14px;font-weight:600;color:rgba(255,255,255,.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero.cov .cchip{flex:none;border:0;border-radius:999px;padding:6px 8px 6px 13px;min-height:32px;color:#fff;font:inherit;font-size:13.5px;font-weight:600;
+  display:inline-flex;align-items:center;gap:2px;transition:transform .3s var(--spring)}
+.hero.cov .cchip svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.hero.cov .cchip:active{transform:scale(.95)}
+.hero.cov .cbig{display:flex;flex-direction:column;margin-top:2px}
+.hero.cov .cbig .lab{font-size:15px;font-weight:600;color:rgba(255,255,255,.88);animation:swapin .6s var(--out)}
+.hero.cov .cbig .row{display:flex;align-items:baseline;gap:8px}
+.hero.cov .cbig b{font-family:var(--f-num);font-size:64px;line-height:1.04;font-weight:800;letter-spacing:-.035em;text-shadow:0 2px 18px rgba(0,0,0,.18)}
+.hero.cov .cbig em{font-style:normal;font-size:18px;font-weight:700;color:rgba(255,255,255,.9)}
+/* 玻璃进度槽 + 透明泡泡 */
+.hero.cov .ctrack{height:30px;border-radius:15px;margin-top:2px}
+.hero.cov .clip{position:absolute;inset:3px;border-radius:12px;overflow:hidden}
+.hero.cov .clip i{position:absolute;inset:0;border-radius:12px;transform:translateX(calc((var(--v,0) - 1) * 100%));transition:transform 1.3s var(--spring)}
+.hero.cov .clip .plan{--v:var(--vp,0);background:rgba(255,255,255,.22)}
+.hero.cov .clip .fill{background:linear-gradient(90deg,rgba(255,255,255,.72),#fff);box-shadow:0 0 14px rgba(255,255,255,.55);overflow:hidden}
+.hero.cov .clip .fill::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.95) 50%,transparent 70%);transform:translateX(-100%);mix-blend-mode:overlay}
+.hero.cov .ctrack.go .fill::after{animation:csweep 1.1s var(--out) .25s}
+@keyframes csweep{to{transform:translateX(100%)}}
+.hero.cov .kw{position:absolute;left:-6px;right:36px;top:0;bottom:0;transform:translateX(calc(var(--v,0) * 100%));transition:transform 1.3s var(--spring);z-index:6;pointer-events:none}
+.hero.cov .knob{position:absolute;left:0;top:50%;width:42px;height:42px;margin-top:-21px;border-radius:50%;
+  background:radial-gradient(120% 120% at 50% 0%,rgba(255,255,255,.3),rgba(255,255,255,.05) 65%);
+  -webkit-backdrop-filter:blur(1.5px) saturate(190%) brightness(1.15);backdrop-filter:blur(1.5px) saturate(190%) brightness(1.15);
+  box-shadow:inset 0 2px 2px -1px rgba(255,255,255,.95),inset 0 -2px 3px -1px rgba(255,255,255,.5),inset 0 0 10px rgba(255,255,255,.25),0 6px 16px rgba(0,0,0,.24)}
+.hero.cov .knob::before{content:"";position:absolute;inset:0;border-radius:50%;padding:1.5px;
+  background:conic-gradient(from 200deg,rgba(255,255,255,.95),rgba(255,130,205,.8),rgba(130,195,255,.85),rgba(255,255,255,.35) 45%,rgba(255,215,130,.75),rgba(150,135,255,.8),rgba(120,235,220,.7),rgba(255,255,255,.95));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)}
+.hero.cov .knob::after{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(34% 26% at 32% 22%,rgba(255,255,255,.8),transparent 70%)}
+.hero.cov .ctrack.go .knob{animation:csquish 1.3s var(--out)}
+@keyframes csquish{0%{transform:scale(1)}22%{transform:scale(1.32,.8)}55%{transform:scale(.92,1.08)}100%{transform:scale(1)}}
+.hero.cov .ctl{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600;color:rgba(255,255,255,.88);margin-top:-4px}
+.hero.cov .ctl b{color:#fff;font-weight:800}
+/* 三块玻璃小卡 */
+.hero.cov .ctiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hero.cov .ctile{border-radius:20px;padding:11px 10px 12px 11px;display:flex;flex-direction:column;gap:3px;min-width:0;animation:ctin .6s var(--spring) backwards;animation-delay:calc(var(--i) * 70ms + 250ms)}
+@keyframes ctin{from{opacity:0;transform:translateY(10px) scale(.97)}}
+.hero.cov .tn{font-size:12px;font-weight:600;color:rgba(255,255,255,.84)}
+.hero.cov .tv{display:flex;align-items:baseline;gap:3px;white-space:nowrap;min-width:0}
+.hero.cov .tv b{font-family:var(--f-num);font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.hero.cov .tv em{font-style:normal;font-size:10px;font-weight:600;color:rgba(255,255,255,.76);overflow:hidden;text-overflow:ellipsis}
+.hero.cov .bar{position:relative;height:5px;border-radius:3px;background:rgba(255,255,255,.22);overflow:hidden;margin-top:5px}
+.hero.cov .bar i{position:absolute;inset:0;border-radius:3px;background:#fff;transform:translateX(calc((var(--v,0) - 1) * 100%));transition:transform 1.2s var(--spring) calc(var(--i) * 90ms + 200ms)}
+.hero.cov .bar .pl{--v:var(--vp,0);background:rgba(255,255,255,.36)}
+.hero.cov .ctile.full{box-shadow:inset 0 1px 1px -.5px rgba(255,255,255,.7),0 0 18px rgba(255,255,255,.28)}
+/* 底下三格 */
+.hero.cov .hfoot{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:0}
+.hero.cov .stat{border-radius:16px;padding:8px 11px;border:0}
+.hero.cov .stat>span{font-size:11.5px;color:rgba(255,255,255,.82);opacity:1}
+.hero.cov .stat b,.hero.cov .stat input{font-family:var(--f-num);font-size:17px;font-weight:800;color:#fff}
+.hero.cov .stat b small{font-size:11px;font-weight:600;margin-left:2px;color:rgba(255,255,255,.8);font-family:var(--f-body)}
+.hero.cov .stat input::placeholder{color:rgba(255,255,255,.55)}
+.hero.cov .stat:focus-within{background:rgba(255,255,255,.3)}
+.hero.cov .streak{color:rgba(255,255,255,.9);opacity:1;margin-top:-4px}
+@media (prefers-reduced-motion:reduce){.hero.cov .mesh i,.hero.cov .ctrack.go .knob,.hero.cov .ctrack.go .fill::after,.hero.cov .ctile{animation:none!important}
+  .hero.cov .clip i,.hero.cov .kw,.hero.cov .bar i{transition-duration:.3s}}
+@media (prefers-reduced-transparency:reduce){.hero.cov .gl{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(0,0,0,.28)}}
+
+/* ---------- 1.6.1 所有卡片：专辑封面那圈细细的玻璃亮边 ----------
+   一圈 1 像素的渐变边：左上和右下最亮（像光打在玻璃厚度上），中间几乎看不见；再加一道很淡的上沿高光。 */
+:root{--rim:linear-gradient(150deg,#fff 0%,rgba(0,0,0,.05) 26%,rgba(0,0,0,.1) 56%,rgba(255,255,255,.95) 100%);--rim-hi:rgba(255,255,255,1);--rim-lo:rgba(0,0,0,.04)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rim:linear-gradient(150deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,.07) 28%,rgba(255,255,255,.04) 58%,rgba(255,255,255,.26) 100%);--rim-hi:rgba(255,255,255,.22);--rim-lo:rgba(0,0,0,.4)}}
+:root[data-theme="dark"]{--rim:linear-gradient(150deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,.07) 28%,rgba(255,255,255,.04) 58%,rgba(255,255,255,.26) 100%);--rim-hi:rgba(255,255,255,.22);--rim-lo:rgba(0,0,0,.4)}
+.card,.meal,.nfcard,.note,.snapitem{border:1px solid transparent;
+  background:linear-gradient(var(--card),var(--card)) padding-box,var(--rim) border-box;
+  box-shadow:inset 0 1px 1px -.5px var(--rim-hi),inset 0 -1px 1px -.5px var(--rim-lo),var(--lift)}
+@media (prefers-contrast:more){.card,.meal,.nfcard,.note,.snapitem{border-color:var(--ink3);background:var(--card)}}
+
+/* ---------- 1.6.1 拍包装：只认营养成分表 ---------- */
+.snapcta.pack{background:linear-gradient(var(--card),var(--card)) padding-box,linear-gradient(110deg,#30d158,#40c8e0,#30d158) border-box;background-size:auto,300% 100%;animation-duration:9s}
+.snapcta.pack .ic{background:linear-gradient(150deg,#34c759,#0fb5ae);box-shadow:0 6px 18px rgba(15,181,174,.32)}
+.snapcta.pack .ic::after{border-color:rgba(15,181,174,.4);animation-delay:1.3s}
+.snapcta.pack .ic svg{stroke-linecap:round}
+.snaphero.pack .lens span{background:linear-gradient(150deg,#34c759,#0fb5ae)}
+/* 「拍营养成分表」的提示按钮 */
+.pkghint{display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;font-size:13.5px;line-height:1.45;color:var(--ink2);cursor:pointer;
+  border:1px solid color-mix(in srgb,#0fb5ae 35%,transparent);background:color-mix(in srgb,#0fb5ae 9%,var(--card));border-radius:14px;padding:9px 12px;margin-top:8px;transition:transform .2s var(--out)}
+.pkghint:active{transform:scale(.98)}
+.pkghint b{color:#0b8f89}
+.pkghint svg{width:26px;height:26px;flex:none;fill:none;stroke:#0fb5ae;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pkghint b{color:#5fe0d8}}
+:root[data-theme="dark"] .pkghint b{color:#5fe0d8}
+.sheet .sb>.pkghint{margin:0 0 4px}
+/* 两步 */
+.packsteps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;counter-reset:st}
+.packsteps li{counter-increment:st;display:grid;grid-template-columns:28px 1fr;column-gap:10px;align-items:center;padding:10px 12px;border-radius:16px;background:var(--fill);opacity:.62}
+.packsteps li::before{content:counter(st);grid-row:span 2;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:14px;font-family:var(--f-num);background:var(--fill2);color:var(--ink2)}
+.packsteps li.on{opacity:1;background:color-mix(in srgb,#0fb5ae 11%,var(--card))}
+.packsteps li.on::before{background:#0fb5ae;color:#fff}
+.packsteps li.done{opacity:1}
+.packsteps li.done::before{content:"✓";background:var(--green,#34c759);color:#fff}
+.packsteps b{font-size:15px}
+.packsteps span{font-size:12.5px;color:var(--ink2)}
+/* 读出来的表：长得像包装上那张 */
+.packcard{display:flex;flex-direction:column;gap:12px;animation:rise .5s var(--out) backwards}
+.pshots{display:flex;gap:10px}
+.pshots img{width:84px;height:84px;object-fit:cover;border-radius:16px;box-shadow:var(--lift);animation:thumbin .6s var(--spring) backwards;animation-delay:calc(var(--j) * 90ms)}
+.ptable{border:1.5px solid var(--ink);border-radius:14px;overflow:hidden;background:var(--card)}
+.ptable .ph,.ptable .pr{display:grid;grid-template-columns:1.15fr 1.1fr .9fr;align-items:center;gap:6px;padding:8px 12px}
+.ptable .ph{font-size:12.5px;font-weight:700;border-bottom:1.5px solid var(--ink);background:var(--fill)}
+.ptable .ph span:not(:first-child),.ptable .pr span:not(:first-child){text-align:right}
+.ptable .pr{font-size:14.5px;animation:rise .45s var(--out) backwards;animation-delay:calc(var(--j) * 45ms + 120ms)}
+.ptable .pr+.pr{border-top:.5px solid var(--sep)}
+.ptable .pr span:first-child{display:flex;flex-direction:column;line-height:1.25}
+.ptable .pr small{font-size:11px;color:var(--ink2)}
+.ptable .pr.dim span:first-child{color:var(--ink2)}
+.ptable .pr span:nth-child(2){display:flex;align-items:baseline;justify-content:flex-end;gap:3px}
+.ptable input{width:100%;min-width:0;max-width:78px;text-align:right;font-size:15px;font-weight:800;border:0;border-radius:8px;padding:5px 7px;background:var(--fill);color:var(--ink)}
+.ptable input:focus{outline:2px solid #0fb5ae;outline-offset:0;background:var(--card)}
+.ptable em{font-style:normal;font-size:11.5px;color:var(--ink2);font-family:var(--f-body);font-weight:500}
+.ptable .pr span:nth-child(3){font-weight:800;color:var(--ink2)}
+.ptable .pr span:nth-child(3) em{margin-left:2px}
+@media (prefers-reduced-motion:reduce){.packcard,.ptable .pr,.pshots img{animation:none}}
