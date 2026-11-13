@@ -30,6 +30,8 @@ const ob = JavaScriptObfuscator.obfuscate(js.outputFiles[0].text, {
   stringArray: true, stringArrayEncoding: ["base64"], stringArrayThreshold: 1,
   stringArrayRotate: true, stringArrayShuffle: true, splitStrings: true, splitStringsChunkLength: 8,
   unicodeEscapeSequence: false, transformObjectKeys: true,
+  // 食物库是公开数据，一大串文字切碎编码会让启动变慢，原样保留
+  reservedStrings: ["^VC啤酒\\|"],
   // 下面这些会让动画变卡，不开
   controlFlowFlattening: false, deadCodeInjection: false, selfDefending: false, debugProtection: false,
 });
