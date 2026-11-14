@@ -13,6 +13,8 @@ import { CATS } from "./foods.js";
 import { haptic, burst, fullFx, Roll, calm } from "./fx.js";
 import { Num, KSeg } from "./motion.js";
 import { Me } from "./me.js";
+import { HeroBowl, Store, SCENES } from "./art.js";
+import { pickPhoto } from "./snap.js";
 
 const WK = "日一二三四五六";
 const WD = "一二三四五六日";
@@ -96,113 +98,125 @@ const BowlArt = () => html`<svg class="art bowl" viewBox="0 0 220 220" aria-hidd
   <g class="sticks"><path d="M150 30 196 96" stroke="#d9b98a" stroke-width="5" stroke-linecap="round" /><path d="M162 26 204 90" stroke="#c9a678" stroke-width="5" stroke-linecap="round" /></g>
 </svg>`;
 
-const BarsArt = ({ seq }) => {
-  const H = { H: 1, M: 0.66, L: 0.42 };
-  const s = (seq || "LLLHLLL").slice(0, 7).padEnd(7, "M");
-  return html`<svg class="art bars" viewBox="0 0 220 220" aria-hidden="true">
-    <defs>
-      <linearGradient id="bhf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:#fff" /><stop offset=".55" style="stop-color:#ffd2a8" /><stop offset="1" style="stop-color:#ff6a4a" /></linearGradient>
-      <linearGradient id="bnf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:rgba(255,255,255,.55)" /><stop offset="1" style="stop-color:rgba(255,255,255,.06)" /></linearGradient>
-      <radialGradient id="bglw" cx="50%" cy="60%" r="50%"><stop offset="0" style="stop-color:#ff8a5c;stop-opacity:.55" /><stop offset="1" style="stop-color:#ff8a5c;stop-opacity:0" /></radialGradient>
-    </defs>
-    <ellipse cx="120" cy="150" rx="90" ry="60" fill="url(#bglw)" />
-    ${[...s].map((k, i) => { const h = 34 + H[k] * 120, x = 30 + i * 24, y = 190 - h - i * 4; const hi = k === "H";
-      return html`<g class="bar3" style=${`--i:${i}`}>
-        <path d=${`M${x} ${y + 6}l10-6 10 6v${h}l-10 6-10-6z`} fill=${hi ? "url(#bhf)" : "url(#bnf)"} opacity=${hi ? 1 : 0.85} />
-        <path d=${`M${x} ${y + 6}l10-6 10 6-10 6z`} fill=${hi ? "#fff" : "rgba(255,255,255,.6)"} />
-        <path d=${`M${x + 10} ${y + 12}v${h}l10-6v-${h}z`} fill="rgba(0,0,0,.28)" />
-      </g>`; })}
-  </svg>`;
-};
-
-// ---------- 今日页 ----------
+// ---------- 今日页（照 Norg：顶栏 → ◂ 今日 ▸ → 封面卡 → 快捷栏 → 身体数据 → 打卡等级） ----------
 export function Today() {
   const { S, d, day, byId, T, info } = context();
   useEffect(() => { if (!day.plan) replanLocal(false); }, [d, !!day.plan]);
   const plan = day.plan, get = (id) => byId[id];
-  const tp = sumItems(planItems(plan), get), te = sumItems(planItems(plan, true), get);
+  const te = sumItems(planItems(plan, true), get);
   const streak = streakOf(S, d);
   const lv = levelOf(S);
   return html`
     <header class="nhead">
       <span class="logo"><${Logo} />饭票</span>
-      <span class="nhr"><span class="probadge">${KIND[T.kind] ? KIND[T.kind].s : GOALS[T.goal].n}</span>
+      <span class="nhr"><span class="probadge">${GOALS[T.goal].n}</span>
         <button class="flame" id="streak" onClick=${() => UI.go("me")} aria-label=${"连续记录 " + streak + " 天"}><${Ic} d=${I.flame} /><b class="num">${streak}</b></button></span>
     </header>
-    <${Cover} S=${S} d=${d} T=${T} info=${info} tp=${tp} te=${te} plan=${plan} />
+    <div class="dayttl">
+      <button class="dtri l" onClick=${() => UI.page({ t: "diet", cal: true })} aria-label="前一天"><svg viewBox="0 0 10 12"><path d="M8 1v10L1 6z" /></svg></button>
+      <h1>今日</h1>
+      <button class="dtri r" onClick=${() => UI.page({ t: "diet", cal: true })} aria-label="后一天"><svg viewBox="0 0 10 12"><path d="M2 1v10l7-5z" /></svg></button>
+    </div>
+    <${Cover} S=${S} d=${d} T=${T} info=${info} te=${te} plan=${plan} />
     <${Dock} />
+    <${TodayMeals} S=${S} day=${day} byId=${byId} T=${T} />
     <${BodyData} S=${S} te=${te} T=${T} />
     <button class="rankcard" id="rank-card" onClick=${() => UI.open({ t: "rank" })}>
-      <${RankGem} tier=${lv.tier} />
-      <span class="rk"><small>打卡等级</small><b>${lv.name}</b><span>吃完一样打个勾，就能涨经验</span>
-        <span class="xpbar"><i style=${`--v:${Math.min(1, lv.cur / lv.need)}`}></i></span>
+      <span class="rk"><small>打卡等级</small><b>${lv.name}</b><span>${lv.xp ? "吃完一样打个勾，就能涨经验" : "开始积累等级，吃完一样打个勾"}</span></span>
+      <${RankGem} tier=${lv.tier} size=${54} />
+      <span class="xpwrap"><span class="xpbar"><i style=${`--v:${Math.min(1, lv.cur / lv.need)}`}></i></span>
         <span class="xpl num"><span>${lv.cur} / ${lv.need} XP</span><span>${lv.next}</span></span></span>
-      <${Ic} d=${I.chev} cls="chev" />
-    </button>
-    <p class="hint">点上面的大卡片，看今天吃什么、记录饮食。</p>`;
+    </button>`;
 }
 
 const Logo = () => html`<svg class="logomark" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5v2a2.5 2.5 0 0 0 0 5v2a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5v-2a2.5 2.5 0 0 0 0-5z" /><path class="cut" d="M9 5v14" /></svg>`;
 
-function Cover({ S, d, T, info, tp, te, plan }) {
-  const [face, setFace] = useState(() => (app.coverFace || "diet"));
-  const box = useRef(null), sw = useRef(null);
-  const set = (f) => { if (f === face) return; haptic(5); app.coverFace = f; setFace(f); };
-  const meals = plan ? SLOTS.filter((s) => plan.meals[s].some((it) => it.done)).length : 0;
-  const pct = T.kcal ? Math.min(1, te.kcal / T.kcal) : 0;
-  const left = Math.max(0, T.kcal - te.kcal);
-  const open = (e) => {
-    if (e.target.closest("button")) return;
-    if (sw.current && sw.current.moved) return;
-    const r = box.current.getBoundingClientRect();
-    UI.page({ t: face, from: r });
+// 今天吃什么：1.7 的内容（每一餐、打勾、换一份、AI 排餐、钠和纤维）
+function TodayMeals({ S, day, byId, T }) {
+  const plan = day.plan, get = (id) => byId[id];
+  if (!plan) return null;
+  const tp = sumItems(planItems(plan), get), te = sumItems(planItems(plan, true), get);
+  const prob = issues(tp, T, S.prefs.budget);
+  const items = planItems(plan), allDone = items.length > 0 && items.every((it) => it.done);
+  const replan = (e) => {
+    haptic(8);
+    if (!fullFx(S)) { replanLocal(true); return UI.toast("换了一种搭配"); }
+    const r = e.currentTarget.getBoundingClientRect();
+    UI.fs({ t: "wipe", x: r.left + r.width / 2, y: r.top + r.height / 2, onMid: () => replanLocal(true) });
   };
-  // 左右滑换面
-  const down = (e) => { sw.current = { x: e.clientX, y: e.clientY, moved: false }; };
-  const move = (e) => { const s = sw.current; if (!s) return; if (Math.abs(e.clientX - s.x) > 12) s.moved = true; };
-  const up = (e) => { const s = sw.current; if (!s) return; const dx = e.clientX - s.x; if (Math.abs(dx) > 46 && Math.abs(dx) > Math.abs(e.clientY - s.y)) set(dx < 0 ? "plan" : "diet"); setTimeout(() => { sw.current = null; }, 0); };
-  const rows = rhythm(S, d, 7);
-  const lab = dayLabel(S, d);
-  const pname = S.cycle && S.cycle.name ? S.cycle.name : info.plan.n;
-  const kd = face === "plan" ? (T.kind || "N") : "D";
-  return html`<section class=${"cover kd-" + kd} ref=${box} id="cover" onClick=${open} onPointerDown=${down} onPointerMove=${move} onPointerUp=${up} onPointerCancel=${() => { sw.current = null; }} aria-label="今天">
-    <div class="cv-bg" aria-hidden="true"><i class="l1"></i><i class="l2"></i><i class="l3"></i></div>
-    <div class="cv-art" key=${face}>${face === "diet" ? html`<${BowlArt} />` : html`<${BarsArt} seq=${rows.map((r) => r.kind || "M").join("")} />`}</div>
-    <div class="cv-sheen" aria-hidden="true"></div>
-    <div class="cv-top">
-      <div class="fsw" role="tablist" style=${`--at:${face === "plan" ? 1 : 0}`}>
-        <i class="th" aria-hidden="true"><i key=${face}></i></i>
-        <button role="tab" id="face-diet" aria-selected=${String(face === "diet")} onClick=${() => set("diet")}>饮食</button>
-        <button role="tab" id="face-plan" aria-selected=${String(face === "plan")} onClick=${() => set("plan")}>计划</button>
-      </div>
-      <button class="cv-ic" id="goal-chip" onClick=${() => UI.open({ t: "target" })} aria-label="今天的目标"><${Ic} d=${I.edit} /><span class="sr">${T.kind ? KIND[T.kind].n : GOALS[T.goal].n + "目标"}</span></button>
+  return html`<section class="tmeals">
+    <div class="sech"><h2><i class="dot"></i>今天吃什么</h2><span class="sechr">
+      <button class="pill2" id="btn-replan" onClick=${replan}><${Ic} d="M4 12a8 8 0 0 1 14-5.3M20 4v4h-4M20 12a8 8 0 0 1-14 5.3M4 20v-4h4" />换一份</button>
+      <button class="pill2 ai" id="btn-ai" onClick=${() => UI.open({ t: "ai" })}><${Ic} d=${I.ai} />AI 排餐</button></span></div>
+    ${day.tip ? html`<div class="note ai" id="ai-tip"><b>AI 的建议</b>${day.tip}</div>` : null}
+    ${!allDone ? (prob.length ? html`<div class="note" id="issues">${prob.join(" ")}</div>` : html`<div class="note ok" id="issues"><${Ic} d="M5 12.5l4.5 4.5L19 7.5" />热量、蛋白、预算都对上了，照着吃就行。</div>`) : null}
+    <div class="meals" key=${day.pv || 0}>
+      ${SLOTS.map((s, i) => (s === "s" && !S.prefs.snack && !plan.meals.s.length ? null : html`<${Meal} key=${s} slot=${s} idx=${i} items=${plan.meals[s]} mode=${day.modes[s]} byId=${byId} />`))}
     </div>
-    ${face === "diet" ? html`<div class="cv-face" key="diet">
-      <div class="cv-big"><b class="num" id="kcal-eaten"><${Num} v=${te.kcal} f=${fmt} up /></b><em>kcal</em></div>
-      <span class="cv-sub">已记录 ${meals} 餐 · 还可以吃 <b class="num" id="kcal-left">${fmt(left)}</b></span>
-      <div class="cv-bar"><span class="trk"><i style=${`--v:${pct.toFixed(3)}`}></i></span><b class="num">${Math.round(pct * 100)}%</b></div>
-      <div class="cv-mac">
-        ${[["蛋白质", te.p, T.protein], ["碳水", te.cb, T.carb], ["脂肪", te.f, T.fat]].map(([n, v, t], i) => html`<div style=${`--i:${i}`}><small>${n}</small><b class="num">${r0(v)}g</b><i style=${`--v:${t ? Math.min(1, v / t).toFixed(3) : 0}`}></i></div>`)}
-      </div>
-      <div class="cv-arc"><svg viewBox="0 0 300 40" preserveAspectRatio="none" aria-hidden="true"><path d="M2 38Q150 -14 298 38" /></svg><span>建议 <b class="num" id="kcal-target">${fmt(T.kcal)}</b> kcal</span></div>
-    </div>` : html`<div class="cv-face" key="plan">
-      <span class="cv-sub up">${pname}</span>
-      <h2 class="cv-title">${T.kind ? KIND[T.kind].n : "照常吃"}</h2>
-      <span class="cv-sub">${lab || (T.kind ? KIND[T.kind].d : "每天一样，稳稳来")}</span>
-      <div class="cv-days">${rows.map((r, i) => html`<span class=${"k-" + (r.kind || "N") + (i === 0 ? " now" : "")} style=${`--i:${i}`}><i></i><small>${i === 0 ? "今" : WK[new Date(r.d + "T12:00:00").getDay()]}</small></span>`)}</div>
-      <button class="cv-cta" id="cover-cta" onClick=${() => UI.open({ t: "plan" })}>换计划<i><${Ic} d=${I.arrow} /></i></button>
-    </div>`}
+    <${NaFbCard} tp=${tp} te=${te} T=${T} />
   </section>`;
 }
 
-// 封面下面一排：中间大、两边小，可以左右滑
+// 封面卡：「计划 / 饮食」两面都在，换面时交叉淡化；点卡片长成整页
+function Cover({ S, d, T, info, te, plan }) {
+  const [face, setFace] = useState(() => app.coverFace || "diet");
+  const [flip, setFlip] = useState(0);
+  const box = useRef(null), sw = useRef(null);
+  const set = (f) => { if (f === face) return; haptic(5); app.coverFace = f; setFace(f); setFlip((x) => x + 1); };
+  const meals = plan ? SLOTS.filter((s) => plan.meals[s].some((it) => it.done)).length : 0;
+  const pct = T.kcal ? Math.min(1, te.kcal / T.kcal) : 0;
+  const open = (e) => {
+    if (e.target.closest("button")) return;
+    if (sw.current && sw.current.moved) return;
+    UI.page({ t: face, from: box.current.getBoundingClientRect() });
+  };
+  const down = (e) => { sw.current = { x: e.clientX, y: e.clientY, moved: false }; };
+  const move = (e) => { const s = sw.current; if (s && Math.abs(e.clientX - s.x) > 12) s.moved = true; };
+  const up = (e) => { const s = sw.current; if (!s) return; const dx = e.clientX - s.x; if (Math.abs(dx) > 46 && Math.abs(dx) > Math.abs(e.clientY - s.y)) set(dx > 0 ? "plan" : "diet"); setTimeout(() => { sw.current = null; }, 0); };
+  const pname = S.cycle && S.cycle.name ? S.cycle.name : info.plan.n;
+  const lab = dayLabel(S, d);
+  const isPlan = face === "plan";
+  return html`<section class=${"cover " + (isPlan ? "f-plan" : "f-diet")} ref=${box} id="cover" onClick=${open} onPointerDown=${down} onPointerMove=${move} onPointerUp=${up} onPointerCancel=${() => { sw.current = null; }} aria-label="今天">
+    <div class="cv-clip" aria-hidden="true"><i class="cv-red"></i><i class="cv-dark"></i><i class="cv-glow" key=${"g" + flip}></i></div>
+    <div class="cv-art" aria-hidden="true"><${HeroBowl} /></div>
+    <div class="cv-top">
+      <div class="fsw" role="tablist" style=${`--at:${isPlan ? 0 : 1}`}>
+        <i class="th" aria-hidden="true"><i key=${flip}></i></i>
+        <button role="tab" id="face-plan" aria-selected=${String(isPlan)} onClick=${() => set("plan")}>计划</button>
+        <button role="tab" id="face-diet" aria-selected=${String(!isPlan)} onClick=${() => set("diet")}>饮食</button>
+      </div>
+      <span class="cv-ics">
+        <button class="cv-ic fork" id="cover-smart" onClick=${() => UI.open({ t: "smart" })} aria-label="智能食谱"><${Ic} d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 1-3 4-3 7h3v11" /></button>
+        <button class="cv-ic" id="goal-chip" onClick=${() => UI.open({ t: "target" })} aria-label="今天的目标"><${Ic} d=${I.edit} /><span class="sr">${T.kind ? KIND[T.kind].n : GOALS[T.goal].n + "目标"}</span></button>
+      </span>
+    </div>
+    <div class="faces">
+      <div class=${"face fp " + (isPlan ? "on" : "off")} aria-hidden=${String(!isPlan)}>
+        <h2 class="cv-title">${T.kind ? KIND[T.kind].n : "照常吃"}</h2>
+        <span class="cv-l1">${pname}${lab ? " · " + lab : ""}</span>
+        <span class="cv-l2">今天 ${fmt(T.kcal)} 千卡 · 蛋白 ${T.protein} g</span>
+        <span class=${"cv-dash" + (T.kind ? " k-" + T.kind : "")}>${T.kind ? KIND[T.kind].s.slice(0, 1) : ""}</span>
+        <button class="cv-cta" id="cover-cta" tabindex=${isPlan ? 0 : -1} onClick=${() => UI.open({ t: "plan" })}>安排计划<i><${Ic} d=${I.arrow} /></i></button>
+      </div>
+      <div class=${"face fd " + (!isPlan ? "on" : "off")} aria-hidden=${String(isPlan)}>
+        <div class="cv-big"><b class="num" id="kcal-eaten"><${Num} v=${te.kcal} f=${fmt} up /></b><em>kcal</em></div>
+        <span class="cv-sub">已记录 ${meals} 餐<span class="sr"> 还可以吃 <b id="kcal-left">${fmt(Math.max(0, T.kcal - te.kcal))}</b></span></span>
+        <div class="cv-bar"><span class="trk"><i style=${`--v:${pct.toFixed(3)}`}></i></span><b class="num">${Math.round(pct * 100)}%</b></div>
+        <div class="cv-mac">${[["蛋白质", te.p], ["碳水", te.cb], ["脂肪", te.f]].map(([n, v]) => html`<div><small>${n}</small><b class="num">${r0(v)}g</b></div>`)}</div>
+        <div class="cv-arc"><svg viewBox="0 0 300 40" preserveAspectRatio="none" aria-hidden="true"><path d="M2 40Q150 -10 298 40" /></svg><span>目标 <b class="num" id="kcal-target">${fmt(T.kcal)}</b> kcal</span></div>
+      </div>
+    </div>
+  </section>`;
+}
+
+// 封面下面一排：中间的大、两边的小而淡，可以左右滑
 const DOCK = [
   { n: "日历", d: I.cal, go: () => UI.page({ t: "diet", cal: true }) },
-  { n: "饮食计划", d: I.plan, go: () => UI.go("plan") },
-  { n: "打卡等级", d: I.rank, go: () => UI.open({ t: "rank" }) },
+  { n: "食物库", d: I.lib, go: () => { app.findTab = "lib"; UI.go("foods"); } },
+  { n: "饮食计划", d: "M12 3.2l2.3 1.6 2.8-.1.9 2.7 2.2 1.7-.9 2.7.9 2.7-2.2 1.7-.9 2.7-2.8-.1L12 20.8l-2.3-1.6-2.8.1-.9-2.7L3.8 15l.9-2.7-.9-2.7 2.2-1.7.9-2.7 2.8.1zM8.6 12.2l2.3 2.3 4.6-4.8", go: () => UI.open({ t: "plan" }) },
+  { n: "打卡等级", d: "M7 4h10v4a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20.5h7M10 17h4v3.5h-4z", go: () => UI.open({ t: "rank" }) },
+  { n: "智能食谱", d: "M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16 3c-2 1-3 4-3 7h3v11", go: () => UI.open({ t: "smart" }) },
   { n: "主题色", d: I.theme, go: () => UI.open({ t: "theme" }) },
-  { n: "食物库", d: I.lib, go: () => UI.go("find") },
-  { n: "拍一下", d: I.cam, go: () => UI.open({ t: "snap" }) },
   { n: "AI 排餐", d: I.ai, go: () => UI.open({ t: "ai" }) },
 ];
 function Dock() {
@@ -211,15 +225,15 @@ function Dock() {
   const calc = () => {
     const el = ref.current; if (!el) return;
     const r = el.getBoundingClientRect(), cx = r.left + r.width / 2; let best = 0, bd = 9;
-    [...el.children].forEach((c, i) => { const b = c.getBoundingClientRect(), dd = Math.min(1.6, Math.abs(b.left + b.width / 2 - cx) / 84); c.style.setProperty("--d", dd.toFixed(3)); if (dd < bd) { bd = dd; best = i; } });
+    [...el.children].forEach((c, i) => { const b = c.getBoundingClientRect(), dd = Math.min(2, Math.abs(b.left + b.width / 2 - cx) / 74); c.style.setProperty("--d", dd.toFixed(3)); if (dd < bd) { bd = dd; best = i; } });
     setMid(best);
   };
-  useEffect(() => { const el = ref.current; if (!el) return; el.scrollLeft = 2 * 84; calc(); }, []);
-  return html`<div class="dock" ref=${ref} onScroll=${calc}>
+  useEffect(() => { const el = ref.current; if (!el) return; const fix = () => { const c = el.children[2]; if (!c) return; const a = el.getBoundingClientRect(), r = c.getBoundingClientRect(); el.scrollLeft += r.left + r.width / 2 - (a.left + a.width / 2); calc(); }; fix(); requestAnimationFrame(fix); const t = setTimeout(fix, 300); return () => clearTimeout(t); }, []);
+  return html`<div class="dock2" ref=${ref} onScroll=${calc}>
     ${DOCK.map((x, i) => html`<button class=${"dk" + (i === mid ? " mid" : "")} style=${`--i:${i}`} id=${"dock-" + i} onClick=${(e) => {
       const el = e.currentTarget; el.classList.remove("tap"); void el.offsetWidth; el.classList.add("tap"); haptic(6);
       if (i !== mid) { el.scrollIntoView({ inline: "center", block: "nearest", behavior: calm() ? "auto" : "smooth" }); setTimeout(x.go, 260); } else x.go();
-    }}><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d=${x.d} pathLength="1" /></svg></span><b>${x.n}</b></button>`)}
+    }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d=${x.d} pathLength="1" /></svg><b>${x.n}</b></button>`)}
   </div>`;
 }
 
@@ -290,7 +304,7 @@ export function DataCard({ k, S, te, T, demo }) {
 
 function BodyData({ S, te, T }) {
   const [edit, setEdit] = useState(false);
-  const cards = S.prefs.cards || ["weight", "macro"];
+  const cards = S.prefs.cards || [];
   const tap = (k) => {
     if (edit) return;
     if (k === "na" || k === "fb") UI.open({ t: "nafb", tab: k });
@@ -315,9 +329,9 @@ export function CardsSheet({ onClose }) {
   const { S, T, byId, day } = context();
   const te = sumItems(planItems(day.plan, true), (id) => byId[id]);
   const [g, setG] = useState("常用");
-  const cards = S.prefs.cards || ["weight", "macro"];
+  const cards = S.prefs.cards || [];
   const list = Object.keys(CARDS).filter((k) => (g === "常用" ? COMMON.includes(k) : CARDS[k].g === g));
-  const add = (k) => { haptic(8); commit((S) => { const c = S.prefs.cards || ["weight", "macro"]; S.prefs.cards = c.includes(k) ? c.filter((x) => x !== k) : [...c, k]; }); };
+  const add = (k) => { haptic(8); commit((S) => { const c = S.prefs.cards || []; S.prefs.cards = c.includes(k) ? c.filter((x) => x !== k) : [...c, k]; }); };
   return html`<${Sheet} title="添加数据卡片" onClose=${onClose}>
     <div class="utabs">${CARD_GROUPS.map((x) => html`<button aria-pressed=${String(g === x)} onClick=${() => setG(x)}>${x}<small>${x === "常用" ? COMMON.length : Object.keys(CARDS).filter((k) => CARDS[k].g === x).length}</small></button>`)}</div>
     <p class="tiny muted">示例数据，轻点卡片添加或移除</p>
@@ -342,12 +356,13 @@ export function RankSheet({ onClose }) {
 }
 
 // ---------- 主题色（对应 Norg 的主题市场） ----------
-export const ACCENTS = [["", "海", "#4ea1ff", "深海里透上来的蓝"], ["berry", "莓", "#ff5c7a", "熟透的树莓"], ["pine", "松", "#2fd6a0", "雨后的松针"], ["iris", "藤", "#9b85ff", "傍晚的紫藤"], ["persimmon", "柿", "#ff9a3c", "挂在枝头的柿子"]];
+export const ACCENTS = [["", "焰", "#ff3b4e", "炭火上跳的红"], ["sea", "海", "#4ea1ff", "深海里透上来的蓝"], ["berry", "莓", "#ff5c7a", "熟透的树莓"], ["pine", "松", "#2fd6a0", "雨后的松针"], ["iris", "藤", "#9b85ff", "傍晚的紫藤"], ["persimmon", "柿", "#ff9a3c", "挂在枝头的柿子"]];
 export function setAccent(id, at) {
   const go = () => commit((S) => { S.prefs.accent = id; });
   const root = document.documentElement;
   if (at) { root.style.setProperty("--tx", at.x + "px"); root.style.setProperty("--ty", at.y + "px"); root.style.setProperty("--tr", Math.ceil(Math.hypot(Math.max(at.x, innerWidth - at.x), Math.max(at.y, innerHeight - at.y))) + "px"); }
-  if (document.startViewTransition && !calm()) document.startViewTransition(() => { go(); root.dataset.accent = id; }); else go();
+  const tag = () => { if (id) root.dataset.accent = id; else delete root.dataset.accent; };
+  if (document.startViewTransition && !calm()) document.startViewTransition(() => { go(); tag(); }); else go();
 }
 export function ThemePicker() {
   const S = app.S, cur = S.prefs.accent || "";
@@ -362,140 +377,223 @@ export function ThemeSheet({ onClose }) {
   return html`<${Sheet} title="主题色" onClose=${onClose}><p class="small muted">按钮、图标、选中的东西都会换成这个颜色。</p><${ThemePicker} /><//>`;
 }
 
-// ---------- 详情页外壳：从封面卡片的位置长成整页 ----------
+// ---------- 整页：封面卡片本身往下长成整页；收起时缩回卡片，弹一下落位 ----------
 export function DPage({ pg, onClose }) {
   const [on, setOn] = useState(false);
   const r = pg.from;
-  const st = r ? `--it:${r.top}px;--il:${r.left}px;--ir:${innerWidth - r.right}px;--ib:${Math.max(0, innerHeight - r.bottom)}px` : "--it:100%;--il:0px;--ir:0px;--ib:0px";
+  const H = innerHeight, W = innerWidth;
+  const st = r ? `--t:${r.top}px;--l:${r.left}px;--r:${W - r.right}px;--b:${H - r.bottom}px` : `--t:${H}px;--l:0px;--r:0px;--b:0px`;
   useEffect(() => { const a = requestAnimationFrame(() => requestAnimationFrame(() => setOn(true))); return () => cancelAnimationFrame(a); }, []);
   const Body = pg.t === "plan" ? PlanPage : DietPage;
-  return html`<div class=${"dpage" + (on && !pg.closing ? " on" : "") + (pg.closing ? " out" : "") + (r ? " exp" : "")} style=${st} role="dialog" aria-modal="true">
-    <${Body} pg=${pg} onClose=${onClose} />
+  return html`<div class=${"dpage" + (on && !pg.closing ? " on" : "") + (pg.closing ? " out" : "") + (pg.t === "plan" ? " red" : "") + (r ? " exp" : "")} style=${st} role="dialog" aria-modal="true">
+    <div class="dp-box"><i class="dp-red" aria-hidden="true"></i><i class="dp-glow" aria-hidden="true"></i><${Body} pg=${pg} onClose=${onClose} /></div>
   </div>`;
 }
 
-function PHead({ onClose, right }) {
+function PHead({ onClose, date, right }) {
   const n = new Date();
-  return html`<div class="phead rv" style="--i:0">
+  return html`<div class="phead">
     <button class="pclose" id="page-close" onClick=${onClose} aria-label="收起"><${Ic} d=${I.down} /></button>
-    <span class="pdate">${n.getMonth() + 1}月${n.getDate()}日 · 今日</span>
+    ${date ? html`<span class="pdate">${n.getMonth() + 1}月${n.getDate()}日 · 今日</span>` : null}
     <span class="pr">${right}</span>
   </div>`;
 }
 
-// 一周日期条，往下拉（或点小横条）展开成整个月
-function WeekStrip({ S, open, setOpen }) {
+// 弧线 + 一周日期条；下面的小横条往下拉（或点一下）展开整个月
+function WeekArc({ S, label, open, setOpen }) {
   const today = dateStr(), base = new Date(today + "T12:00:00"), mon = addDays(today, -((base.getDay() + 6) % 7));
   const ds = Array.from({ length: 7 }, (_, i) => addDays(mon, i));
   const ate = (d) => { const x = S.days[d]; return !!(x && x.plan && planItems(x.plan, true).length); };
   const y0 = useRef(null);
-  return html`<div class=${"wstrip" + (open ? " open" : "")} onPointerDown=${(e) => { y0.current = e.clientY; }} onPointerUp=${(e) => { if (y0.current != null && e.clientY - y0.current > 40) setOpen(true); if (y0.current != null && e.clientY - y0.current < -40) setOpen(false); y0.current = null; }}>
-    ${open ? html`<div class="wcal"><${Calendar} /></div>` : html`<div class="wdays">${ds.map((d, i) => { const k = dayInfo(S, d).kind; return html`<span class=${"wd" + (d === today ? " now" : "") + (d > today ? " fut" : "") + (k ? " k-" + k : "")} style=${`--i:${i}`}>
-      <small>${WD[i]}</small><b class="num">${+d.slice(8)}</b><i class=${ate(d) ? "on" : ""}></i></span>`; })}</div>`}
+  return html`<div class=${"warc" + (open ? " open" : "")} onPointerDown=${(e) => { y0.current = e.clientY; }} onPointerUp=${(e) => { if (y0.current != null) { const dy = e.clientY - y0.current; if (dy > 40) setOpen(true); if (dy < -40) setOpen(false); } y0.current = null; }}>
+    ${label ? html`<div class="arcline"><svg viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true"><path d="M-20 120Q200 -40 420 120" /></svg><span>${label}</span></div>` : null}
+    ${open ? html`<div class="wcal"><${Calendar} /></div>` : html`<div class="wdays">${ds.map((d, i) => { const k = dayInfo(S, d).kind; return html`<span class=${"wd" + (d === today ? " now" : "") + (d > today ? " fut" : "") + (k ? " k-" + k : "")}>
+      <small>${d === today ? "今" : WD[i]}</small><b class="num">${+d.slice(8)}</b><i class=${ate(d) && d !== today ? "on" : ""}></i></span>`; })}</div>`}
     <button class="grabber" id="cal-toggle" onClick=${() => setOpen(!open)} aria-label=${open ? "收起日历" : "展开日历"}><i></i></button>
   </div>`;
 }
 
 function DietPage({ pg, onClose }) {
-  const { S, d, day, byId, T } = context();
+  const { S, day, byId, T } = context();
   const [cal, setCal] = useState(!!pg.cal);
-  const [tipOff, setTipOff] = useState(false);
+  const [tipOff, setTipOff] = useState(!!app.smartOff);
+  useEffect(() => { const f = () => setCal(true); addEventListener("fp-cal", f); return () => removeEventListener("fp-cal", f); }, []);
   const plan = day.plan, get = (id) => byId[id];
-  const tp = sumItems(planItems(plan), get), te = sumItems(planItems(plan, true), get);
+  const te = sumItems(planItems(plan, true), get);
   const pct = T.kcal ? Math.min(1, te.kcal / T.kcal) : 0;
   const meals = plan ? SLOTS.filter((s) => plan.meals[s].some((it) => it.done)).length : 0;
-  const prob = plan ? issues(tp, T, S.prefs.budget) : [];
-  const items = planItems(plan), allDone = items.length > 0 && items.every((it) => it.done);
-  return html`<div class="pbody2">
-    <${PHead} onClose=${onClose} right=${html`<button class="pic" id="tgt-open" onClick=${() => UI.open({ t: "target" })} aria-label="目标怎么算的"><${Ic} d=${I.stats} /></button>`} />
-    <div class="dsum rv" style="--i:1">
+  const eaten = plan ? SLOTS.map((s) => [s, plan.meals[s].filter((it) => it.done && byId[it.id]).map((it) => ({ n: byId[it.id].n, k: byId[it.id].k * it.qty }))]).filter(([, l]) => l.length) : [];
+  return html`<div class="dp-scroll">
+    <${PHead} onClose=${onClose} right=${html`<button class="pic" id="tgt-open" onClick=${() => UI.open({ t: "nafb" })} aria-label="饮食分析"><${Ic} d=${I.stats} /></button>`} />
+    <div class="dsum">
       <div class="cv-big"><b class="num"><${Num} v=${te.kcal} f=${fmt} /></b><em>kcal</em></div>
       <span class="cv-sub">已记录 ${meals} 餐</span>
       <div class="cv-bar"><span class="trk"><i style=${`--v:${pct.toFixed(3)}`}></i></span><b class="num">${Math.round(pct * 100)}%</b></div>
-      <div class="cv-mac">${[["蛋白质", te.p, T.protein], ["碳水", te.cb, T.carb], ["脂肪", te.f, T.fat]].map(([n, v, t], i) => html`<div style=${`--i:${i}`}><small>${n}</small><b class="num">${r0(v)}g<em> / ${r0(t)}</em></b><i style=${`--v:${t ? Math.min(1, v / t).toFixed(3) : 0}`}></i></div>`)}</div>
-      <div class="cv-arc big"><svg viewBox="0 0 300 40" preserveAspectRatio="none" aria-hidden="true"><path d="M2 38Q150 -14 298 38" /></svg><span>建议 <b class="num">${fmt(T.kcal)}</b> kcal</span></div>
+      <div class="cv-mac">${[["蛋白质", te.p], ["碳水", te.cb], ["脂肪", te.f]].map(([n, v]) => html`<div><small>${n}</small><b class="num">${r0(v)}g</b></div>`)}</div>
     </div>
-    <div class="rv" style="--i:2"><${WeekStrip} S=${S} open=${cal} setOpen=${setCal} /></div>
-    ${!tipOff ? html`<div class="smart rv" style="--i:3">
-      <div class="sm-h"><b>饭票智能排餐</b><button class="pic sm" onClick=${() => setTipOff(true)} aria-label="收起"><${Ic} d=${I.x} /></button></div>
-      <span class="small muted">按你的目标${S.prefs.budget ? "和 ¥" + S.prefs.budget + " 预算" : ""}，一键排好今天吃什么</span>
-      <div class="row">
-        <button class="btn grow" id="btn-replan" onClick=${(e) => { haptic(8); if (!fullFx(S)) { replanLocal(true); return UI.toast("换了一种搭配"); } const r = e.currentTarget.getBoundingClientRect(); UI.fs({ t: "wipe", x: r.left + r.width / 2, y: r.top + r.height / 2, onMid: () => replanLocal(true) }); }}>换一份</button>
-        <button class="btn primary grow" id="btn-ai" onClick=${() => UI.open({ t: "ai" })}><${Ic} d=${I.ai} />AI 排餐</button>
-      </div>
-    </div>` : null}
-    ${day.tip ? html`<div class="note ai rv" style="--i:4" id="ai-tip"><b>AI 的建议</b>${day.tip}</div>` : null}
-    ${plan && !allDone ? (prob.length ? html`<div class="note rv" style="--i:4" id="issues">${prob.join(" ")}</div>` : html`<div class="note ok rv" style="--i:4" id="issues"><${Ic} d="M5 12.5l4.5 4.5L19 7.5" />热量、蛋白、预算都对上了，照着吃就行。</div>`) : null}
-    ${plan ? html`<div class="rv" style="--i:5"><${NaFbCard} tp=${tp} te=${te} T=${T} /></div>` : null}
-    <div class="meals rv" style="--i:6" key=${day.pv || 0}>
-      ${plan ? SLOTS.map((s, i) => (s === "s" && !S.prefs.snack && !plan.meals.s.length ? null : html`<${Meal} key=${s} slot=${s} idx=${i} items=${plan.meals[s]} mode=${day.modes[s]} byId=${byId} />`)) : html`<p class="empty2">这一天还没有餐食记录</p>`}
-    </div>
-    <div class="logbar">
-      <button class="lb-main" id="log-open" onClick=${() => UI.open({ t: "log" })}>记录饮食</button>
-      <button class="lb-ic" id="log-add" onClick=${() => UI.open({ t: "log" })} aria-label="记录饮食"><${Ic} d=${I.plus} /></button>
-      <button class="lb-ic" id="log-fav" onClick=${() => UI.open({ t: "fav" })} aria-label="我的食物"><${Ic} d=${I.fav} /></button>
-    </div>
+    <${WeekArc} S=${S} open=${cal} setOpen=${setCal} label=${html`还可吃 <b class="num">${fmt(Math.max(0, T.kcal - te.kcal))}</b> kcal`} />
+    ${!tipOff ? html`<button class="smartcard" id="smart-open" onClick=${(e) => { if (e.target.closest(".x2")) return; UI.open({ t: "smart" }); }}>
+      <b>饭票智能食谱</b><span>选一份食谱，安排每天的餐食</span>
+      <span class="x2" role="button" aria-label="收起" onClick=${() => { app.smartOff = true; setTipOff(true); }}><${Ic} d=${I.x} /></span></button>` : null}
+    ${day.tip ? html`<div class="note ai" id="ai-tip"><b>AI 的建议</b>${day.tip}</div>` : null}
+    ${eaten.length ? html`<div class="logged">${eaten.map(([s, list]) => html`<div class="lgrow"><span class="lgi"><${Ic} d=${MEAL_GLYPH[s]} /></span>
+        <span class="lgt"><b>${s === "l" ? "中餐" : SLOT_NAME[s]}</b><span>${list.map((x) => x.n).join("、")}</span></span><b class="num">${r0(list.reduce((a, x) => a + x.k, 0))}<small> kcal</small></b></div>`)}</div>`
+      : html`<p class="empty3">这一天还没有餐食记录</p>`}
+    <div class="dp-pad"></div>
+  </div>
+  <div class="logbar">
+    <button class="lb-main" id="log-open" onClick=${() => UI.open({ t: "log" })}><span>记录饮食</span><i id="log-add"><${Ic} d=${I.plus} /></i></button>
+    <button class="lb-ic" id="log-fav" onClick=${() => UI.open({ t: "fav" })} aria-label="全部收藏"><${Ic} d="M8 3.5h8a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 19V5A1.5 1.5 0 0 1 8 3.5zM10 17h4" /></button>
   </div>`;
 }
 
 function PlanPage({ onClose }) {
   const S = app.S, today = dateStr(), info = dayInfo(S, today), T = targetsFor(S, today);
+  const [cal, setCal] = useState(false);
   const rows = rhythm(S, today, 7);
   const pname = S.cycle && S.cycle.name ? S.cycle.name : info.plan.n;
   const lab = dayLabel(S, today);
-  return html`<div class="pbody2">
-    <${PHead} onClose=${onClose} right=${html`<button class="pic" onClick=${() => UI.open({ t: "planedit", id: info.plan.id })} aria-label="改这个计划"><${Ic} d=${I.edit} /></button><button class="pic" onClick=${() => UI.page({ t: "diet", cal: true })} aria-label="日历"><${Ic} d=${I.cal} /></button>`} />
-    <div class="ptitle rv" style="--i:1"><h1>${T.kind ? KIND[T.kind].n : pname}</h1><span class="muted">${pname}${lab ? " · " + lab : ""}</span><span class="muted">今天 ${fmt(T.kcal)} 千卡 · 蛋白 ${T.protein} g · 碳水 ${T.carb} g · 脂肪 ${T.fat} g</span></div>
-    <div class="wdays big rv" style="--i:2">${rows.map((r, i) => html`<span class=${"wd" + (i === 0 ? " now" : "") + (r.kind ? " k-" + r.kind : "")} style=${`--i:${i}`}><small>${WK[new Date(r.d + "T12:00:00").getDay()]}</small><b class="num">${+r.d.slice(8)}</b><i class="on"></i></span>`)}</div>
-    <div class="sech rv" style="--i:3"><h2>接下来 7 天 <small class="num">${rows.length}</small></h2><button class="lnk" onClick=${() => UI.open({ t: "plan" })}><${Ic} d=${I.plus} />换计划</button></div>
-    ${rows.map((r, i) => html`<div class=${"prow rv k-" + (r.kind || "M")} style=${`--i:${i + 4}`}>
+  const cyc = !!T.kind;
+  return html`<div class="dp-scroll">
+    <${PHead} onClose=${onClose} date right=${html`<button class="pic" onClick=${() => UI.open({ t: "planedit", id: info.plan.id })} aria-label="改这个计划"><${Ic} d=${I.edit} /></button><button class="pic" onClick=${() => setCal(!cal)} aria-label="日历"><${Ic} d=${I.cal} /></button>`} />
+    <div class="ptitle"><h1>${T.kind ? KIND[T.kind].n : "照常吃"}</h1>
+      <span>${pname}${lab ? " · " + lab : ""}</span><span>今天 ${fmt(T.kcal)} 千卡 · 蛋白 ${T.protein} g · 碳水 ${T.carb} g · 脂肪 ${T.fat} g</span>
+      <span class=${"cv-dash big" + (T.kind ? " k-" + T.kind : "")}>${T.kind ? KIND[T.kind].s.slice(0, 1) : ""}</span></div>
+    <${WeekArc} S=${S} open=${cal} setOpen=${setCal} />
+    <div class="sech"><h2>计划板块 <small class="num">${cyc ? rows.length : 0}</small></h2><button class="pill2" onClick=${() => UI.open({ t: "plan" })}><${Ic} d=${I.plus} />换计划</button></div>
+    ${cyc ? rows.map((r, i) => html`<div class=${"prow k-" + (r.kind || "M")}>
       <span class="no num">${i + 1}</span>
       <span class="tx"><b class="num">${fmt(r.T.kcal)} 千卡</b><span class="num">${i === 0 ? "今天 · " : ""}蛋白 ${r.T.protein}　碳水 ${r.T.carb}　脂肪 ${r.T.fat}</span></span>
-      <span class="pill">${r.kind ? KIND[r.kind].s : "照常"}</span></div>`)}
-    <p class="tiny muted rv" style="--i:12">${planOf(info.plan.id).d}</p>
-    <div class="logbar one"><button class="cv-cta wide" id="plan-cta" onClick=${() => UI.open({ t: "planedit", id: info.plan.id })}>调整这个计划<i><${Ic} d=${I.arrow} /></i></button></div>
-  </div>`;
+      <span class="pill">${KIND[r.kind] ? KIND[r.kind].s : "照常"}</span></div>`)
+    : html`<div class="noplan"><${Ic} d="M12 5v14M6 13l6 6 6-6" /><b>暂无安排</b><span>选一个碳循环计划，安排每一天吃多少</span></div>`}
+    <div class="dp-pad"></div>
+  </div>
+  <div class="logbar one"><button class="cv-cta wide" id="plan-cta" onClick=${() => UI.open({ t: "plan" })}>安排计划<i><${Ic} d=${I.arrow} /></i></button></div>`;
 }
 
-// ---------- 记录饮食：早午晚加四格 ----------
-export function LogSheet({ onClose }) {
-  const { day, byId } = context();
-  const kc = (s) => (day.plan ? r0(sumItems(day.plan.meals[s].filter((it) => it.done), (id) => byId[id]).kcal) : 0);
-  const COL = { b: "#ffb547", l: "#ff6a4a", d: "#9b85ff", s: "#40e0c8" };
-  return html`<${Sheet} title="记录饮食" onClose=${onClose}>
-    <div class="slots">${SLOTS.map((s, i) => html`<button class="slot" id=${"log-" + s} style=${`--i:${i};--c:${COL[s]}`} onClick=${() => UI.open({ t: "pick", slot: s })}>
-      <span class="si"><${Ic} d=${MEAL_ICON[s]} /></span><b>${SLOT_NAME[s]}</b><small class="num">${kc(s) ? kc(s) + " 千卡" : "还没吃"}</small></button>`)}</div>
-    <div class="row">
-      <button class="btn grow" id="log-snap" onClick=${() => UI.open({ t: "snap" })}><${Ic} d=${I.cam} />拍一下</button>
-      <button class="btn grow" id="log-say" onClick=${() => UI.open({ t: "snap", mode: "say" })}><${Ic} d=${I.say} />说一句</button>
-    </div>
+// ---------- 记录饮食：早午晚加四格，点一格就长成「拍摄餐食」 ----------
+const MEAL_GLYPH = { b: "M3 18h18M5.5 18a6.5 6.5 0 0 1 13 0M12 8V5M5.6 10.6 3.8 8.8M18.4 10.6l1.8-1.8M8 14l-2 0M18 14h-2", l: "M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4", d: "M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z", s: "M14.5 9.5 4 20l-.5-.5L14 9M14 9c1-3 4-5 7-5-1 1-1 2-.5 3 1-.5 2-.5 3 0-1 3-4 5-7 5" };
+export function LogSheet({ onClose, still }) {
+  const ref = useRef(null);
+  const openCam = (s) => {
+    const sh = ref.current && ref.current.closest(".sheet");
+    const top = sh ? sh.getBoundingClientRect().top : innerHeight * 0.55;
+    UI.open({ t: "cam", slot: s, from: top });
+  };
+  return html`<${Sheet} title="记录饮食" onClose=${onClose} still=${still} cls="logsheet" right=${html`<button class="hist" id="log-hist" onClick=${() => { onClose(); dispatchEvent(new Event("fp-cal")); }}><${Ic} d="M3.5 12a8.5 8.5 0 1 0 2.5-6M3.5 4v4h4M12 7.5V12l3 2" />历史</button>`}>
+    <div class="slots2" ref=${ref}>${SLOTS.map((s) => html`<button class="slot2" id=${"log-" + s} onClick=${() => openCam(s)}><${Ic} d=${MEAL_GLYPH[s]} /><b>${s === "l" ? "中餐" : SLOT_NAME[s]}</b></button>`)}</div>
   <//>`;
 }
 
-// ---------- 我的食物（对应 Norg 的全部收藏）：左边一条分类栏 ----------
+// ---------- 拍摄餐食：实时取景（拿不到相机就退回系统相机） ----------
+export function CamSheet({ slot = "b", from, onClose }) {
+  const vid = useRef(null), stream = useRef(null);
+  const [live, setLive] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [out, setOut] = useState(false);
+  useEffect(() => {
+    let dead = false;
+    const md = navigator.mediaDevices;
+    if (md && md.getUserMedia) md.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } }, audio: false }).then((s) => {
+      if (dead) { s.getTracks().forEach((t) => t.stop()); return; }
+      stream.current = s; if (vid.current) { vid.current.srcObject = s; vid.current.play().catch(() => {}); } setLive(true);
+    }).catch(() => {});
+    return () => { dead = true; if (stream.current) stream.current.getTracks().forEach((t) => t.stop()); };
+  }, []);
+  const send = (file) => { if (!file) return; UI.open({ t: "snap", slot, file }); };
+  const shoot = async () => {
+    haptic(10);
+    const v = vid.current;
+    if (live && v && v.videoWidth) {
+      setBusy(true);
+      const cv = document.createElement("canvas"); cv.width = v.videoWidth; cv.height = v.videoHeight;
+      cv.getContext("2d").drawImage(v, 0, 0);
+      cv.toBlob((b) => { setBusy(false); send(b && new File([b], "meal.jpg", { type: "image/jpeg" })); }, "image/jpeg", 0.9);
+    } else send(await pickPhoto(true));
+  };
+  const back = () => { setOut(true); setTimeout(() => UI.open({ t: "log", still: true }), calm() ? 0 : 280); };
+  return html`<div class=${"campage" + (out ? " back" : "")} style=${`--from:${from != null ? from : innerHeight}px`} role="dialog" aria-label="拍摄餐食">
+    <div class="cam-in">
+      <div class="cam-h">
+        <button class="pic" id="cam-back" onClick=${back} aria-label="返回"><${Ic} d="M15 5l-7 7 7 7" /></button>
+        <span><b>拍摄餐食</b><small>${SLOT_NAME[slot]}</small></span>
+        <button class="pic" id="cam-search" onClick=${() => UI.open({ t: "pick", slot })} aria-label="搜食物"><${Ic} d=${I.lib} /></button>
+      </div>
+      <div class=${"vf" + (live ? " live" : "")}>
+        <video ref=${vid} playsinline muted autoplay></video>
+        ${!live ? html`<div class="vf-ph"><${Ic} d=${I.cam} /><span>点下面的大圆按钮拍照</span></div>` : null}
+        <i class="cn tl"></i><i class="cn tr"></i><i class="cn bl"></i><i class="cn br"></i>
+        <span class="vf-chip"><i></i>请完整拍摄食物</span>
+      </div>
+      <p class="cam-tip">尽量靠近食物，保持光线充足</p>
+      <div class="cam-bar">
+        <button class="cb" id="cam-album" onClick=${async () => send(await pickPhoto(false))}><${Ic} d="M4 5h16v14H4zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM4 17l5-5 4 4 2.5-2.5L20 17" /><small>相册</small></button>
+        <button class=${"shutter" + (busy ? " busy" : "")} id="cam-shoot" onClick=${shoot} aria-label="拍照"><i></i></button>
+        <button class="cb" id="cam-text" onClick=${() => UI.open({ t: "snap", mode: "say", slot })}><${Ic} d="M5 6h14M5 10h14M5 14h9M5 18h6" /><small>文字记录</small></button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ---------- 全部收藏：左边一条分类栏，底下拍照存入 / 手动加 ----------
+const CAT_IC = { 全部: "M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z", 主食: "M4 12h16a8 8 0 0 1-16 0zM7 9c0-2 2-3 2-5M12 9c0-2 2-3 2-5", 肉蛋水产: "M12 4c4 0 7 4 7 9a7 7 0 0 1-14 0c0-5 3-9 7-9z", 奶和豆: "M9 3h6v3l2 3v12H7V9l2-3z", 蔬菜: "M12 21c0-6 0-9-4-13M12 14c3-1 6-4 6-9-4 0-6 3-6 6", 水果: "M12 7c-5-3-9 1-8 6s4 8 8 6c4 2 7-1 8-6s-3-9-8-6zM12 7c0-2 1-3 3-4", 坚果: "M12 3c4 2 6 6 6 10s-3 8-6 8-6-4-6-8 2-8 6-10z", 速食: "M4 9h16v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM8 9V5M12 9V4M16 9V5", 补剂: "M7 8h10v12H7zM9 4h6v4H9z", 食堂外食: "M3 10h18M5 10V20h14V10M4 10l2-6h12l2 6" };
 export function FavSheet({ onClose }) {
   const S = app.S, foods = allFoods(S).filter((f) => f.on || f.custom);
   const [cat, setCat] = useState("全部");
+  const [grid, setGrid] = useState(false);
   const h = new Date().getHours(), slot0 = h < 10 ? "b" : h < 15 ? "l" : h < 21 ? "d" : "s";
   const [slot, setSlot] = useState(slot0);
   const list = foods.filter((f) => cat === "全部" || f.c === cat);
   const add = (f) => {
-    commit((S) => { const day = S.days[dateStr()]; if (!day || !day.plan) return; const arr = day.plan.meals[slot]; const hit = arr.find((x) => x.id === f.id); if (hit) hit.qty += f.st; else arr.push({ id: f.id, qty: f.st, done: true }); });
+    commit((S) => { const day = S.days[dateStr()]; if (!day || !day.plan) return; const arr = day.plan.meals[slot]; const hit = arr.find((x) => x.id === f.id); if (hit) { hit.qty += f.st; hit.done = true; } else arr.push({ id: f.id, qty: f.st, done: true }); });
     haptic(8); UI.toast("已记到" + SLOT_NAME[slot] + "：" + f.n);
   };
   const cats = ["全部", ...CATS.filter((c) => foods.some((f) => f.c === c))];
-  return html`<${Sheet} title="我的食物" onClose=${onClose}>
-    <div class="chips">${SLOTS.map((s) => html`<button class="chip" aria-pressed=${String(slot === s)} onClick=${() => setSlot(s)}>${SLOT_NAME[s]}</button>`)}</div>
+  const nx = { b: "l", l: "d", d: "s", s: "b" };
+  return html`<${Sheet} title="全部收藏" onClose=${onClose} cls="favsheet" right=${html`<span class="shr"><button class="pic sm2" onClick=${() => setGrid(!grid)} aria-label="切换排列"><${Ic} d=${I.grid} /></button><button class="pic sm2" onClick=${() => { onClose(); app.findTab = "mine"; UI.go("foods"); }} aria-label="管理食物"><${Ic} d="M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6" /></button></span>`}>
+    <div class="favmeta"><span class="num">${list.length} 项食物</span><button class="slotpick" id="fav-slot" onClick=${() => setSlot(nx[slot])}>记到 ${SLOT_NAME[slot]}<${Ic} d=${I.down} /></button></div>
     <div class="favwrap">
-      <div class="rail">${cats.map((c) => html`<button aria-pressed=${String(cat === c)} onClick=${() => setCat(c)}>${c === "全部" ? html`<${Ic} d=${I.fav} />` : c.slice(0, 2)}</button>`)}</div>
-      <div class="favlist" key=${cat}>${list.length ? list.map((f, i) => html`<button class="frow" style=${`--i:${Math.min(i, 12)}`} onClick=${() => add(f)}><b>${f.n}</b><span class="num">${f.u} · ${r0(f.k)} 千卡 · 蛋白 ${f.p}g</span><i><${Ic} d=${I.plus} /></i></button>`)
-        : html`<div class="empty2"><${Ic} d=${I.fav} />暂无食物</div>`}</div>
+      <div class="rail">${cats.map((c) => html`<button aria-pressed=${String(cat === c)} onClick=${() => setCat(c)} aria-label=${c}><${Ic} d=${CAT_IC[c] || CAT_IC["全部"]} /></button>`)}</div>
+      <div class=${"favlist" + (grid ? " grid" : "")} key=${cat + grid}>${list.length ? list.map((f, i) => html`<button class="frow" style=${`--i:${Math.min(i, 12)}`} onClick=${() => add(f)}><b>${f.n}</b><span class="num">${f.u} · ${r0(f.k)} 千卡 · 蛋白 ${f.p}g</span><i><${Ic} d=${I.plus} /></i></button>`)
+        : html`<div class="empty2"><${Ic} d="M8 3.5h8a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 19V5A1.5 1.5 0 0 1 8 3.5zM10 17h4" /><b>暂无食物</b><span>拍一下包装，存成自己的食物</span></div>`}</div>
     </div>
-    <div class="row favbot">
-      <button class="btn grow" id="fav-snap" onClick=${() => UI.open({ t: "snap", mode: "pack" })}><${Ic} d=${I.cam} />拍照存入</button>
-      <button class="btn sq" id="fav-new" onClick=${() => UI.open({ t: "food", id: null })} aria-label="手动加食物"><${Ic} d=${I.plus} /></button>
+    <div class="favbot2">
+      <button class="pillbtn" id="fav-snap" onClick=${() => UI.open({ t: "snap", mode: "pack" })}><${Ic} d=${I.cam} />拍照存入</button>
+      <button class="circbtn" id="fav-new" onClick=${() => UI.open({ t: "food", id: null })} aria-label="手动加食物"><${Ic} d=${I.plus} /></button>
     </div>
   <//>`;
+}
+
+// ---------- 智能食谱：整页从下面滑上来，一排小店左右滑 ----------
+export function SmartSheet({ onClose }) {
+  const ref = useRef(null);
+  const [at, setAt] = useState(0);
+  const calc = () => {
+    const el = ref.current; if (!el) return;
+    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2; let best = 0, bd = 1e9;
+    [...el.children].forEach((c, i) => { const b = c.getBoundingClientRect(), dd = (b.left + b.width / 2 - cx) / b.width; c.style.setProperty("--a", Math.min(1, Math.abs(dd)).toFixed(3)); if (Math.abs(dd) < bd) { bd = Math.abs(dd); best = i; } });
+    if (best !== at) { setAt(best); haptic(4); }
+  };
+  useEffect(() => { calc(); }, []);
+  const sc = SCENES[at];
+  const use = () => {
+    haptic(12);
+    if (!sc.modes) { UI.open({ t: "ai" }); return; }
+    commit((S) => { S.prefs.modes = { ...S.prefs.modes, ...sc.modes }; const day = S.days[dateStr()]; if (day) day.modes = { ...day.modes, ...sc.modes }; });
+    replanLocal(true);
+    UI.toast("已按「" + sc.n + "」排好今天");
+    onClose();
+  };
+  return html`<div class="smartpage" role="dialog" aria-label="智能食谱">
+    <div class="sp-h"><button class="pic" id="smart-back" onClick=${onClose} aria-label="返回"><${Ic} d="M15 5l-7 7 7 7" /></button><b>智能食谱</b><span></span></div>
+    <h2 class="sp-q">选择你的用餐场景</h2>
+    <div class="street" ref=${ref} onScroll=${calc}>
+      ${SCENES.map((s, i) => html`<button class="shop" id=${"scene-" + s.id} onClick=${(e) => { if (i !== at) e.currentTarget.scrollIntoView({ inline: "center", block: "nearest", behavior: calm() ? "auto" : "smooth" }); else use(); }}><${Store} s=${s} /></button>`)}
+    </div>
+    <div class="sp-name" key=${at}><b>${sc.n}</b><span>${sc.d}</span></div>
+    <button class="sp-go" id="smart-use" key=${"g" + at} onClick=${use}>${sc.modes ? "用这个食谱" : "让 AI 排"}<${Ic} d="M7 17 17 7M9 7h8v8" /></button>
+    <div class="sp-dots">${SCENES.map((_, i) => html`<i class=${i === at ? "on" : ""}></i>`)}</div>
+  </div>`;
 }
 
 // ---------- 计划页（对应 Norg 的训练页） ----------
@@ -514,16 +612,16 @@ export function PlanTab() {
 
 // ---------- 发现页（对应 Norg 的发现：推荐 / 好友 / 主题市场） ----------
 const QUICK = ["鸡胸", "鸡蛋", "牛奶", "米饭", "燕麦", "豆腐", "西兰花", "香蕉", "牛肉", "虾"];
-export function FindView() {
-  const [tab, setTab] = useState(app.findTab || "lib");
+export function FoodsTab() {
+  const [tab, setTab] = useState(app.findTab || "mine");
   const [q, setQ] = useState("鸡胸");
   const go = (t) => { app.findTab = t; setTab(t); };
   const res = searchLib(q, 30);
   return html`
-    <header class="nhead"><span class="logo"><${Logo} />发现</span>
-      <span class="nhr"><button class="pic" onClick=${() => { go("lib"); setTimeout(() => { const el = document.getElementById("find-q"); if (el) el.focus(); }, 50); }} aria-label="搜索"><${Ic} d=${I.lib} /></button><button class="pic" onClick=${() => UI.open({ t: "shop" })} aria-label="采购清单"><${Ic} d=${I.bell} /></button></span></header>
-    <div class="utabs line" style=${`--at:${["lib", "mine", "theme"].indexOf(tab)}`}>
-      ${[["lib", "食物库"], ["mine", "我的食物"], ["theme", "主题色"]].map(([k, n]) => html`<button id=${"find-" + k} aria-pressed=${String(tab === k)} onClick=${() => go(k)}>${n}</button>`)}<i class="ul"></i></div>
+    <header class="nhead"><h1 class="bigt">食物</h1>
+      <span class="nhr"><button class="pic" onClick=${() => { go("lib"); setTimeout(() => { const el = document.getElementById("find-q"); if (el) el.focus(); }, 50); }} aria-label="搜索"><${Ic} d=${I.lib} /></button><button class="pic" id="shop-open" onClick=${() => UI.open({ t: "shop" })} aria-label="采购清单"><${Ic} d="M5 7h14l-1.4 11.2a2 2 0 0 1-2 1.8H8.4a2 2 0 0 1-2-1.8zM9 7a3 3 0 0 1 6 0" /></button></span></header>
+    <div class="utabs line" style=${`--at:${["mine", "lib"].indexOf(tab)}`}>
+      ${[["mine", "我的食物"], ["lib", "食物库"]].map(([k, n]) => html`<button id=${"find-" + k} aria-pressed=${String(tab === k)} onClick=${() => go(k)}>${n}</button>`)}<i class="ul"></i></div>
     <div class="fpane" key=${tab}>
     ${tab === "lib" ? html`
       <input class="inp" id="find-q" placeholder=${"在 " + libSize() + " 种食物里搜"} value=${q} onInput=${(e) => setQ(e.target.value)} />
@@ -531,8 +629,14 @@ export function FindView() {
       <div class="card" id="find-res"><div class="list">${res.map((x, i) => html`<div style=${`--i:${Math.min(i, 14)}`} class="lin"><${LibRow} key=${x.lid} x=${x} onPick=${(x) => UI.open({ t: "lib", lid: x.lid })} /></div>`)}
         ${!res.length ? html`<p class="muted">没找到。换个说法试试，或者到「我的食物」里手动加。</p>` : null}</div></div>
       <p class="tiny muted">数据来自《中国食物成分表》，每 100 克的典型值。</p>`
-    : tab === "mine" ? html`<${FoodsView} />` : html`<${ThemePicker} />`}
+    : html`<${FoodsView} />`}
     </div>`;
+}
+
+export function RecordsTab() {
+  return html`<header class="nhead"><h1 class="bigt">记录</h1>
+    <span class="nhr"><button class="pic" onClick=${() => UI.page({ t: "diet", cal: true })} aria-label="日历"><${Ic} d=${I.cal} /></button></span></header>
+    <div class="merec"><${Records} /></div>`;
 }
 
 // ---------- 我的（大头图 + 统计 + 记录 + 设置） ----------
@@ -573,12 +677,10 @@ export function MeView() {
       </div>
     </section>
     <div class="metiles">
-      <button class="mt" onClick=${() => UI.open({ t: "rank" })}><${RankGem} tier=${lv.tier} size=${38} /><b>${lv.name}</b></button>
-      <button class="mt" onClick=${() => UI.page({ t: "diet", cal: true })}><span class="mtb"><${Ic} d=${I.cal} /></span><small>日历</small></button>
-      <div class="mt"><small>本月平均</small><b class="num">${fmt(avg)}<small> 千卡</small></b><small class="muted">${mrows.length} 天有记录</small></div>
+      <button class="metile" onClick=${() => UI.open({ t: "rank" })}><${RankGem} tier=${lv.tier} size=${38} /><b>${lv.name}</b></button>
+      <button class="metile" onClick=${() => UI.go("records")}><span class="mtb"><${Ic} d=${I.cal} /></span><small>记录</small></button>
+      <div class="metile"><small>本月平均</small><b class="num">${fmt(avg)}<small> 千卡</small></b><small class="muted">${mrows.length} 天有记录</small></div>
     </div>
-    <div class="sech"><h2>我的记录</h2></div>
-    <div class="merec"><${Records} /></div>
     <div class="sech" id="me-set"><h2>设置</h2></div>
     <div class="meset"><${Me} /></div>`;
 }

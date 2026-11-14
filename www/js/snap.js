@@ -123,7 +123,7 @@ function PackCard({ t, set, warn, shots }) {
   </div>`;
 }
 
-export function SnapSheet({ slot: slot0, mode: mode0, onClose }) {
+export function SnapSheet({ slot: slot0, mode: mode0, file: file0, onClose }) {
   const S = app.S;
   const [mode, setMode] = useState(mode0 === "pack" || mode0 === "say" ? mode0 : "meal"); // meal 饭菜 | pack 包装 | say 说一句
   const [phase, setPhase] = useState("pick"); // pick | front(包装：问要不要拍正面) | scan | result
@@ -143,10 +143,12 @@ export function SnapSheet({ slot: slot0, mode: mode0, onClose }) {
   app.byId = Object.fromEntries(foods.map((f) => [f.id, f]));
   const ready = visionReady(S);
   useEffect(() => () => ctl.current && ctl.current.abort(), []);
+  // 从「拍摄餐食」页拍好的照片直接送进来认
+  useEffect(() => { if (file0 && mode === "meal") go(false, file0); }, []);
 
-  const go = async (camera) => {
+  const go = async (camera, given) => {
     setErr("");
-    const file = await pickPhoto(camera);
+    const file = given || (await pickPhoto(camera));
     if (!file) return;
     let im;
     try { im = await shrink(file); } catch (e) { return setErr(e.message); }

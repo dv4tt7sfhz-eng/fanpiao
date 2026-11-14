@@ -2,7 +2,7 @@
 import { html, render, useState, useEffect, useReducer, useRef, app, UI } from "./ui.js";
 import { Onboarding } from "./onboarding.js";
 import { TargetSheet, ModeSheet, ItemSheet, PickSheet, AISheet } from "./today.js";
-import { Today, PlanTab, FindView, MeView, DPage, LogSheet, FavSheet, CardsSheet, RankSheet, ThemeSheet } from "./home.js";
+import { Today, FoodsTab, RecordsTab, MeView, DPage, LogSheet, FavSheet, CardsSheet, RankSheet, ThemeSheet, CamSheet, SmartSheet } from "./home.js";
 import { FoodSheet, ShopSheet } from "./foodsview.js";
 import { SnapSheet } from "./snap.js";
 import { liquidify } from "./liquid.js";
@@ -17,15 +17,15 @@ import { haptic, fullFx, installRipple, calm } from "./fx.js";
 import { Splash, Calc, AIThinking, Wipe, Celebrate } from "./fullscreen.js";
 
 const TABS = [
-  { id: "today", n: "今日", d: "M5 6.5h14v13H5zM5 10.5h14M9 4v4M15 4v4M9 14.5h2" },
-  { id: "plan", n: "计划", d: "M5 19V13M10 19V8M15 19v-4M20 19V5" },
-  { id: "find", n: "发现", d: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5l-2 5-5 2 2-5z" },
+  { id: "today", n: "今天", d: "M5 6.5h14v13H5zM5 10.5h14M9 4v4M15 4v4M9 14.5h2" },
+  { id: "foods", n: "食物", d: "M4 10h16l-1.6 9.2a1 1 0 0 1-1 .8H6.6a1 1 0 0 1-1-.8zM8 10l2.5-6M16 10l-2.5-6" },
+  { id: "records", n: "记录", d: "M5 20v-6M12 20V5M19 20v-9" },
   { id: "me", n: "我的", d: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20.5a7.5 7.5 0 0 1 15 0" },
 ];
-const TITLE = { today: "今日", plan: "计划", find: "发现", me: "我的" };
+const TITLE = { today: "今天", foods: "食物", records: "记录", me: "我的" };
 const SHEETS = { target: TargetSheet, mode: ModeSheet, item: ItemSheet, pick: PickSheet, ai: AISheet, food: FoodSheet, shop: ShopSheet, snap: SnapSheet, nafb: NaFbSheet,
   profile: ProfileSheet, aiset: AISetSheet, cloud: CloudSheet, data: DataSheet, about: AboutSheet, aiimport: AIImportSheet, lib: LibSheet, plan: PlanSheet, planedit: PlanEditSheet,
-  log: LogSheet, fav: FavSheet, cards: CardsSheet, rank: RankSheet, theme: ThemeSheet };
+  log: LogSheet, fav: FavSheet, cards: CardsSheet, rank: RankSheet, theme: ThemeSheet, cam: CamSheet, smart: SmartSheet };
 const FSC = { splash: Splash, calc: Calc, ai: AIThinking, wipe: Wipe, cele: Celebrate };
 const root = document.documentElement;
 installRipple();
@@ -111,7 +111,7 @@ function App() {
   // 还没建档时也能打开「让 AI 帮你填」
   if (!app.S.profile) return html`<div class="page"><div class="view" key="ob"><${Onboarding} /></div></div>${sheetNode}${toastNode}${fsNode}`;
   if (!ready) return html`<div class="page"></div>${fsNode}`;
-  const View = { today: Today, plan: PlanTab, find: FindView, me: MeView }[tab];
+  const View = { today: Today, foods: FoodsTab, records: RecordsTab, me: MeView }[tab];
   const idx = TABS.findIndex((t) => t.id === tab);
   return html`
     <div class="navglass" aria-hidden="true"><b>${TITLE[tab]}</b></div>

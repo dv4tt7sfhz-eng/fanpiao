@@ -21,7 +21,7 @@ export const num = (v, d = NaN) => { const n = parseFloat(String(v).replace(",",
 export const MODE = { out: { n: "食堂 / 外面吃", s: "外食", c: "out" }, cold: { n: "不开火", s: "不开火", c: "cold" }, cook: { n: "自己做", s: "自己做", c: "cook" } };
 
 // 底部弹出的面板。可以点空白处、点 ×、或者按住顶部往下拖来关闭。
-export function Sheet({ title, onClose, children }) {
+export function Sheet({ title, onClose, children, right, still, cls }) {
   const ref = useRef(null);
   const drag = useRef(null);
   // 拖动：手指和面板 1:1 跟着走；往上拉有橡皮筋阻力；松手时按速度判断，快速往下一甩就关
@@ -42,11 +42,11 @@ export function Sheet({ title, onClose, children }) {
     ref.current.style.transition = "";
     if (d.dy > 110 || (d.dy > 12 && v > 0.35)) onClose(); else ref.current.style.transform = "";
   };
-  return html`<div class="shade" onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
-    <div class="sheet" ref=${ref} role="dialog" aria-label=${title}>
+  return html`<div class=${"shade" + (still ? " still" : "")} onClick=${(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div class=${"sheet" + (still ? " still" : "") + (cls ? " " + cls : "")} ref=${ref} role="dialog" aria-label=${title}>
       <div class="grab" onPointerDown=${down} onPointerMove=${move} onPointerUp=${up} onPointerCancel=${up}><i></i></div>
-      <div class="sh"><h2>${title}</h2><button class="x" aria-label="关闭" onClick=${onClose}>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" /></svg></button></div>
+      <div class="sh"><h2>${title}</h2>${right || html`<button class="x" aria-label="关闭" onClick=${onClose}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" /></svg></button>`}</div>
       <div class="sb">${children}</div>
     </div>
   </div>`;
