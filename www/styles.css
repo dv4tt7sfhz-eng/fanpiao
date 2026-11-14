@@ -2797,3 +2797,233 @@ button.mt:active{transform:scale(.95)}
 #cover-cta[data-back] i,.cv-big[data-back] b{animation:t-pop .5s var(--spring)}
 
 @media (prefers-reduced-motion:reduce){.tapring{display:none}[data-tk],[data-tk] *,[data-tkp] *,[data-back],[data-back] *{animation:none!important}.wgrid.editing .wslot{animation:none}}
+
+/* ===================================================================================
+   2.2.0 调色：液体玻璃
+   想的画面：一片有颜色的暗光（像夜里透过水的霓虹），上面浮着一块块玻璃。
+   ① 光场：整屏最底下铺三束光——主光（主题色）、对面的冷光、底下的暖光。光场钉在屏幕上不跟着滚，玻璃滑过去时透出来的颜色会变。
+   ② 玻璃：卡片不再是深灰实心块，而是半透明的——后面的光透得过来。左上、右下各一道亮边（光从左上来，再从右下折出去）。
+   ③ 主题色分三段：亮面往暖色偏、暗面往冷色偏（不是简单地加白加黑），所以红不是一块死红，而是橘 → 红 → 紫红。
+   ④ 其余颜色（蛋白 / 碳水 / 脂肪、早午晚、钠和纤维……）在同一亮度上重新配了一遍，放在一起不打架。
+   =================================================================================== */
+:root,:root[data-theme="dark"]{
+  --lf-base:#07050b;
+  --bg:#07050b; --bg-up:#120e18; --card:#18141f; --card-up:#1e1926;
+  --ink:#f7f5fb; --ink2:rgba(240,236,250,.66); --ink3:rgba(236,232,250,.4); --sep:rgba(255,255,255,.085);
+  --fill:rgba(255,255,255,.075); --fill2:rgba(255,255,255,.15);
+  --shade:rgba(6,4,10,.5);
+  /* 光场 */
+  --lf:
+    radial-gradient(104% 60% at 2% -8%,rgb(var(--lf-a) / .52),transparent 64%),
+    radial-gradient(86% 60% at 114% 32%,rgb(var(--lf-b) / .4),transparent 66%),
+    radial-gradient(46% 22% at 72% -2%,color-mix(in oklab,rgb(var(--lf-a) / .34) 50%,rgb(var(--lf-b) / .34)) 0%,transparent 72%),
+    radial-gradient(96% 46% at -16% 106%,rgb(var(--lf-c) / .26),transparent 62%),
+    radial-gradient(76% 40% at 106% 110%,rgb(var(--lf-a) / .26),transparent 68%),
+    radial-gradient(60% 30% at 50% 58%,rgb(var(--lf-b) / .1),transparent 70%),
+    linear-gradient(180deg,color-mix(in srgb,rgb(var(--lf-b)) 10%,var(--lf-base)) 0%,var(--lf-base) 54%,#040306 100%);
+  /* 玻璃一：卡片（躺在光场上，自己不模糊——光场本来就是柔的） */
+  --gl-1:radial-gradient(130% 92% at 0% 0%,rgba(255,255,255,.135),transparent 48%),radial-gradient(96% 84% at 106% 106%,rgb(var(--lf-b) / .2),transparent 58%),
+    radial-gradient(74% 62% at -6% 106%,rgb(var(--lf-a) / .12),transparent 60%),linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.026));
+  --gl-1-rim:inset 1px 1px .5px rgba(255,255,255,.34),inset -1px -1px .5px rgb(var(--lf-b) / .55),inset -1px -1px .5px rgba(255,255,255,.1),inset 0 0 0 1px rgba(255,255,255,.04);
+  --gl-1-drop:0 24px 46px -28px rgba(0,0,0,.9),0 3px 8px -3px rgba(0,0,0,.45);
+  /* 玻璃二：卡片上凸起来的小件（按钮、标签） */
+  --gl-2:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.06));
+  --gl-2-rim:inset 0 1px .5px rgba(255,255,255,.24),inset 0 -1px .5px rgba(255,255,255,.055),inset 0 0 0 1px rgba(255,255,255,.05);
+  /* 槽：凹下去的（输入框、分段选择的底、进度条的轨道） */
+  --well:rgba(4,2,8,.3);
+  --well-rim:inset 0 1.5px 3px rgba(0,0,0,.55),inset 0 -1px 0 rgba(255,255,255,.08),inset 0 0 0 1px rgba(255,255,255,.03);
+  /* 玻璃三：浮在内容上面的（底栏、浮窗、提示）——这一种才真的模糊后面的东西 */
+  --gl-3:linear-gradient(170deg,rgba(255,255,255,.2) 0%,rgba(255,255,255,.07) 42%,rgba(255,255,255,.04) 70%,rgba(255,255,255,.12) 100%),rgba(20,14,28,.62);
+  --gl-3-rim:inset 1px 1px .5px rgba(255,255,255,.44),inset -1px -1px .5px rgb(var(--lf-b) / .6),inset -1px -1px .5px rgba(255,255,255,.14),inset 0 0 0 1px rgba(255,255,255,.05);
+  --gl-3-drop:0 18px 40px -16px rgba(0,0,0,.75),0 4px 10px -4px rgba(0,0,0,.4);
+  --gl-blur:blur(24px) saturate(185%) brightness(1.05);
+  /* 有颜色的玻璃（主按钮、选中的东西）：左上暖、右下冷 */
+  --gl-tint:linear-gradient(162deg,color-mix(in oklab,var(--tint-hi) 52%,var(--tint)) 0%,var(--tint) 44%,var(--tint-lo) 100%);
+  --gl-tint-rim:inset 1px 1px .5px rgba(255,255,255,.55),inset -1px -1px .5px rgba(255,255,255,.18),inset 0 -8px 14px -8px color-mix(in srgb,var(--tint-hi) 70%,transparent);
+  --gl-tint-drop:0 12px 28px -10px var(--tint-glow),0 0 0 .5px color-mix(in srgb,var(--tint-lo) 60%,transparent);
+  /* 旧的「材质」记号直接换成玻璃：卡片、数据卡、计划行、主题预览、等级卡、我的页方块都跟着变 */
+  --m-card:var(--gl-1); --m-rim:var(--gl-1-rim); --m-drop:var(--gl-1-drop);
+  /* 日型：余烬 / 琥珀 / 冰川 */
+  --k-h:#fe745b; --k-m:#fcba43; --k-l:#59e4d9;
+  --k-h-soft:rgba(254,116,91,.16); --k-m-soft:rgba(252,186,67,.15); --k-l-soft:rgba(89,228,217,.14);
+  --kg-h:linear-gradient(to top,#8a1240,#f0503c 55%,#ffb884);
+  --kg-m:linear-gradient(to top,#8a3410,#f29a2e 55%,#ffe6a6);
+  --kg-l:linear-gradient(to top,#12327a,#22a6d6 55%,#a6f7e6);
+  /* 三大营养、钠、纤维、好 / 警告 */
+  --c-p:#aaeb6e; --c-cb:#6cd2fe; --c-fat:#faca4b; --na:#9aafff; --fb:#78e292;
+  --green:#39e694; --green-soft:rgba(57,230,148,.15); --green-ink:#7df0af;
+  --amber:#fec943; --amber-soft:rgba(254,201,67,.14); --bad:#fe8a88; --bad-soft:rgba(254,138,136,.15);
+  /* 早 / 午 / 晚 / 加餐 */
+  --c-b:#ff9127; --c-b-soft:rgba(255,145,39,.16); --c-b-ink:#feb074;
+  --c-l:#3bcfcf; --c-l-soft:rgba(59,207,207,.15); --c-l-ink:#61e4cd;
+  --c-d:#7575e9; --c-d-soft:rgba(117,117,233,.18); --c-d-ink:#abb9fe;
+  --c-s:#f75588; --c-s-soft:rgba(247,85,136,.16); --c-s-ink:#fc9ac9;
+}
+/* 六个主题：主色、亮面、暗面、最深、字色，加三束光 */
+:root:not([data-accent]){--tint:#ff3b4e;--tint-hi:#fe9963;--tint-lo:#ae0060;--tint-deep:#420027;--tint-ink:#fea6a3;--tint-soft:rgba(255,59,78,.16);--tint-glow:rgba(255,59,78,.5);--lf-a:236 19 58;--lf-b:97 48 231;--lf-c:253 121 34}  /* 焰 */
+:root[data-accent="sea"]{--tint:#4ea1ff;--tint-hi:#6ad3fe;--tint-lo:#595ec4;--tint-deep:#1b194a;--tint-ink:#95c5fe;--tint-soft:rgba(78,161,255,.16);--tint-glow:rgba(78,161,255,.5);--lf-a:10 128 234;--lf-b:126 28 216;--lf-c:20 188 188}  /* 海 */
+:root[data-accent="berry"]{--tint:#ff5c7a;--tint-hi:#feac91;--tint-lo:#b4267c;--tint-deep:#40012f;--tint-ink:#ffa3ad;--tint-soft:rgba(255,92,122,.16);--tint-glow:rgba(255,92,122,.5);--lf-a:234 15 87;--lf-b:117 35 222;--lf-c:255 119 46}  /* 莓 */
+:root[data-accent="pine"]{--tint:#2fd6a0;--tint-hi:#b4f2a5;--tint-lo:#0b9791;--tint-deep:#012828;--tint-ink:#83d5b2;--tint-soft:rgba(47,214,160,.16);--tint-glow:rgba(47,214,160,.5);--lf-a:7 151 110;--lf-b:1 93 201;--lf-c:21 186 200}  /* 松 */
+:root[data-accent="iris"]{--tint:#9b85ff;--tint-hi:#e3a5fd;--tint-lo:#5a57c8;--tint-deep:#1b174d;--tint-ink:#bfb6ff;--tint-soft:rgba(155,133,255,.16);--tint-glow:rgba(155,133,255,.5);--lf-a:131 90 252;--lf-b:173 9 126;--lf-c:4 181 228}  /* 鸢 */
+:root[data-accent="persimmon"]{--tint:#ff9a3c;--tint-hi:#ffd782;--tint-lo:#ce583b;--tint-deep:#420905;--tint-ink:#f1b280;--tint-soft:rgba(255,154,60,.16);--tint-glow:rgba(255,154,60,.5);--lf-a:188 104 6;--lf-b:103 44 229;--lf-c:254 112 123}  /* 柿 */
+
+/* ---------- ① 光场 ---------- */
+html{background:var(--lf-base)}
+body{background:transparent}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--lf)}
+.page{background:transparent!important}
+body::after{opacity:.06}   /* 颗粒加一点：大片的暗渐变在手机屏上容易出一圈一圈的色带，颗粒能盖住 */
+/* 整页（饮食 / 计划）：框是一扇越开越大的窗，窗后面是同一片光场，所以长出来时颜色是连着的 */
+.dp-box{background:var(--lf-base)}
+.dp-box::before{content:"";position:absolute;top:calc(var(--t) * -1);left:calc(var(--l) * -1);width:var(--W);height:var(--H);pointer-events:none;background:var(--lf);
+  transition:top .46s var(--bx),left .46s var(--bx)}
+.dpage.on .dp-box::before{top:0;left:0}
+.dpage.out .dp-box::before{top:calc(var(--t) * -1);left:calc(var(--l) * -1);transition:top .5s var(--dx),left .5s var(--dx)}
+.campage{background:var(--lf),var(--lf-base)}
+.smartpage{background:radial-gradient(90% 40% at 50% 62%,rgba(255,196,130,.1),transparent 70%),var(--lf),var(--lf-base)}
+@keyframes camup{from{transform:translateY(var(--from));border-radius:28px 28px 0 0}to{transform:none;border-radius:0}}
+.push{background:var(--lf),var(--lf-base)}
+
+/* ---------- ② 玻璃：卡片 ---------- */
+.meal{background:var(--gl-1)!important;box-shadow:var(--gl-1-rim),var(--gl-1-drop)!important}
+.nfcard,.note,.snapitem,.plancur,.plancard,.plannav,.hero.rh,.aibusy,.ptable{border:1px solid transparent;background:var(--gl-1);box-shadow:var(--gl-1-rim)}
+.nfcard{box-shadow:var(--gl-1-rim),var(--gl-1-drop)}
+.smartcard,.lgrow,.frow,.slot2,.rail{background:var(--gl-1);box-shadow:var(--gl-1-rim)}
+.card::after,.wcard::after{background:radial-gradient(110% 60% at 12% -6%,rgba(255,255,255,.07),transparent 58%)}
+.aibusy::after{background:var(--card)}
+.plancur::before{background:radial-gradient(120% 100% at 0% 0%,color-mix(in srgb,var(--tint) 26%,transparent),transparent 60%),radial-gradient(90% 100% at 100% 0%,rgb(var(--lf-b) / .22),transparent 58%)}
+.plancard[aria-pressed="true"]{box-shadow:var(--gl-1-rim),0 0 0 1.5px var(--tint),0 0 26px -8px var(--tint-glow)}
+.plancard .pt b em{box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--green) 40%,transparent)}
+.wadd{background:rgba(255,255,255,.02);border-color:rgba(255,255,255,.2)}
+.qrow{background:linear-gradient(100deg,color-mix(in srgb,var(--tint) 24%,transparent),rgba(255,255,255,.04) 70%);box-shadow:var(--gl-1-rim)}
+/* 带一圈彩虹边的（AI 的东西）：里面留一点透明，彩虹从玻璃里隐隐透出来 */
+.note.ai,.snapcta{--card:rgba(20,15,28,.82)}
+.snapcta{box-shadow:0 18px 36px -24px rgba(0,0,0,.9)}
+
+/* ---------- 槽 ---------- */
+.seg,.kseg,.tile,.glyph,.cdw,.steps3 div,.nfm,.xpbar,.cbar,.nbar,.sbar,.sdots i:not(.on),.utabs:not(.line) button:not([aria-pressed="true"]){background:var(--well);box-shadow:var(--well-rim)}
+.field input,.field select,.field textarea,.inp,.cdw .inp{background:var(--well);box-shadow:var(--well-rim)}
+.field input:focus,.field select:focus,.field textarea:focus,.inp:focus,.cdw .inp:focus{background:rgba(4,2,8,.44);
+  box-shadow:var(--well-rim),0 0 0 1.5px color-mix(in srgb,var(--tint) 85%,transparent),0 0 20px -4px var(--tint-glow)}
+::placeholder{color:var(--ink3)}
+.seg .thumb{background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,.1));box-shadow:inset 0 1px .5px rgba(255,255,255,.4),inset 0 -1px .5px rgba(255,255,255,.08),0 5px 12px -5px rgba(0,0,0,.7)}
+.kseg button:not([class])[aria-pressed="true"]{background:linear-gradient(180deg,rgba(255,255,255,.24),rgba(255,255,255,.1));box-shadow:inset 0 1px .5px rgba(255,255,255,.4),0 5px 12px -5px rgba(0,0,0,.7)}
+.kseg button[class][aria-pressed="true"]{box-shadow:inset 1px 1px .5px rgba(255,255,255,.5),inset -1px -1px .5px rgba(255,255,255,.15),0 6px 16px -6px var(--k)}
+.nfm.na,.nfm.fb{background:var(--well)}
+.na-over .nfm.na{background:linear-gradient(165deg,rgba(254,201,67,.2),rgba(254,201,67,.07));box-shadow:inset 1px 1px .5px rgba(255,226,150,.4),inset 0 0 0 1px rgba(254,201,67,.12)}
+.fb-ok .nfm.fb{background:linear-gradient(165deg,rgba(120,226,146,.17),rgba(120,226,146,.05));box-shadow:inset 1px 1px .5px rgba(190,255,205,.32),inset 0 0 0 1px rgba(120,226,146,.1)}
+.nfm.na .ico{background:linear-gradient(150deg,#c9d4ff,var(--na) 55%,#6276e6)}
+.nfm.fb .ico{background:linear-gradient(150deg,#d4f79a,var(--fb) 55%,#2fa860)}
+.nfm .ico,.nav .ic,.snapcta .ic{box-shadow:inset 1px 1px .5px rgba(255,255,255,.55),inset -1px -1px .5px rgba(255,255,255,.16),0 6px 14px -6px rgba(0,0,0,.6)}
+
+/* ---------- 凸起的小件 ---------- */
+.btn{background:var(--gl-2);box-shadow:var(--gl-2-rim);color:var(--tint-ink)}
+.sheet .btn{box-shadow:var(--gl-2-rim)}
+.btn.danger{color:var(--bad)}
+.btn.primary{background:radial-gradient(110% 85% at 28% -34%,rgba(255,255,255,.4),transparent 58%),var(--gl-tint)!important;box-shadow:var(--gl-tint-rim),var(--gl-tint-drop)!important;color:#fff;text-shadow:0 1px 2px rgba(60,0,20,.35)}
+.chip,.tag,.nfmini>span,.modebtn,.pill2,.opt,.stepper button,.calnav,.pillbtn,.circbtn,.sp-go,.pic,.pclose,.sheet .x{background:var(--gl-2);box-shadow:var(--gl-2-rim)}
+.meal .modebtn{background:var(--gl-2)!important;box-shadow:var(--gl-2-rim)}
+.chip[aria-pressed="true"],.utabs:not(.line) button[aria-pressed="true"],.rail button[aria-pressed="true"]{background:var(--gl-tint);box-shadow:var(--gl-tint-rim),0 8px 18px -8px var(--tint-glow);color:#fff}
+.opt[aria-pressed="true"]{background:linear-gradient(165deg,color-mix(in srgb,var(--tint) 26%,transparent),color-mix(in srgb,var(--tint-lo) 14%,transparent));box-shadow:var(--gl-2-rim),0 0 0 1.5px var(--tint),0 0 24px -8px var(--tint-glow)}
+.pill2.ai,.slotpick{background:linear-gradient(165deg,color-mix(in srgb,var(--tint) 30%,transparent),color-mix(in srgb,var(--tint-lo) 16%,transparent));
+  box-shadow:inset 1px 1px .5px color-mix(in srgb,var(--tint-hi) 70%,transparent),inset 0 0 0 1px color-mix(in srgb,var(--tint) 40%,transparent);color:var(--tint-ink)}
+.tag.warn,.tag.na,.nfmini .hi{background:var(--amber-soft);color:var(--amber);box-shadow:inset 0 0 0 .5px rgba(254,201,67,.35)}
+.tag.fb,.nfmini .good{box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--fb) 40%,transparent)}
+.frow i{background:linear-gradient(165deg,color-mix(in srgb,var(--tint) 34%,transparent),color-mix(in srgb,var(--tint-lo) 18%,transparent));box-shadow:inset 1px 1px .5px color-mix(in srgb,var(--tint-hi) 60%,transparent)}
+/* 开关：关着是槽，开了是一粒绿玻璃 */
+.switch input,.tog{background:var(--well);box-shadow:var(--well-rim)}
+.switch input:checked,.tog[aria-pressed="true"]{background:linear-gradient(165deg,#b5f8c6,var(--green) 44%,#0f9f72);box-shadow:inset 1px 1px .5px rgba(255,255,255,.6),inset -1px -1px .5px rgba(255,255,255,.2),0 0 18px -4px rgba(57,230,148,.6)}
+.switch input::after,.tog::after{background:radial-gradient(120% 120% at 30% 18%,#fff,#efeaf6 55%,#cfc8de);box-shadow:0 2px 6px rgba(0,0,0,.35),inset 0 -1px 1px rgba(0,0,0,.08)}
+/* 提示条 */
+.note.ok,.tmeals .note.ok{background:linear-gradient(165deg,rgba(57,230,148,.17),rgba(57,230,148,.05))!important;box-shadow:inset 1px 1px .5px rgba(180,255,214,.34),inset 0 0 0 1px rgba(57,230,148,.1)!important;color:var(--green-ink)}
+.note.ok svg{background:linear-gradient(160deg,#a9f7c6,var(--green) 50%,#0f9f72);stroke:#04301c;box-shadow:0 0 12px -2px rgba(57,230,148,.7)}
+.note.warn{background:linear-gradient(165deg,rgba(254,201,67,.18),rgba(254,201,67,.06));box-shadow:inset 1px 1px .5px rgba(255,230,160,.36),inset 0 0 0 1px rgba(254,201,67,.1);color:var(--amber)}
+.note.bad{background:linear-gradient(165deg,rgba(254,138,136,.2),rgba(254,138,136,.07));box-shadow:inset 1px 1px .5px rgba(255,200,198,.36),inset 0 0 0 1px rgba(254,138,136,.12);color:var(--bad)}
+.tmeals .note:not(.ok){background:var(--gl-1)!important;box-shadow:var(--gl-1-rim)!important}
+
+/* ---------- 浮在上面的玻璃 ---------- */
+.cv-cta,.lb-main,.lb-ic,.toast,.vf-chip{background:var(--gl-3);box-shadow:var(--gl-3-rim),var(--gl-3-drop);-webkit-backdrop-filter:var(--gl-blur);backdrop-filter:var(--gl-blur)}
+.fpill.glass::before{background:var(--gl-3);box-shadow:var(--gl-3-rim),var(--gl-3-drop);-webkit-backdrop-filter:var(--gl-blur);backdrop-filter:var(--gl-blur)}
+.fpill.glass .fp-go,.lb-main i{background:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,.1));box-shadow:inset 0 1px .5px rgba(255,255,255,.45),inset 0 -1px .5px rgba(255,255,255,.08)}
+/* 整页底下那条「安排计划」：左边是暗玻璃，往右透出主题色 */
+.fpill::before{background:linear-gradient(90deg,rgba(22,16,28,.86) 22%,color-mix(in srgb,var(--tint-lo) 46%,rgba(18,10,20,.9)) 70%,color-mix(in srgb,var(--tint) 52%,rgba(18,10,20,.9))) padding-box,
+    linear-gradient(100deg,rgba(255,255,255,.34),rgba(255,255,255,.08) 34%,color-mix(in srgb,var(--tint-hi) 90%,transparent)) border-box;
+  box-shadow:0 16px 32px -16px #000,0 0 34px -12px var(--tint-glow)}
+.logbar.one .cv-cta.wide{background:linear-gradient(90deg,color-mix(in srgb,var(--tint-lo) 40%,rgba(18,10,20,.9)),color-mix(in srgb,var(--tint) 16%,rgba(14,10,18,.9)));box-shadow:inset 0 0 0 1.5px var(--tint),0 0 26px -8px var(--tint-glow)}
+/* 圆的发光钮：一粒有颜色的玻璃珠 */
+.fp-go,.cv-cta i,.fab.shut .fp-go,.fab.shut .fpill.glass .fp-go{background:radial-gradient(90% 80% at 30% 16%,rgba(255,255,255,.55),transparent 52%),var(--gl-tint)}
+.fp-go,.cv-cta i{box-shadow:var(--gl-tint-rim),0 0 20px -2px var(--tint-glow)}
+.fab.shut .fp-go,.fab.shut .fpill.glass .fp-go{box-shadow:var(--gl-tint-rim),0 10px 24px -6px var(--tint-glow),0 0 0 .5px rgba(255,255,255,.08)}
+.dock .dk.mid .ic,.avatar,.tprev .sw{background:radial-gradient(90% 80% at 30% 14%,rgba(255,255,255,.5),transparent 52%),var(--gl-tint)}
+.avatar{box-shadow:var(--gl-tint-rim),0 0 0 5px rgba(255,255,255,.07),0 0 0 6px rgba(255,255,255,.12),0 0 44px -6px var(--tint-glow)}
+.rmx{background:linear-gradient(160deg,#ffb0a6,var(--bad) 45%,#d83a50);box-shadow:inset 1px 1px .5px rgba(255,255,255,.55),0 4px 10px rgba(0,0,0,.45)}
+
+/* ---------- 标签栏 ---------- */
+.tabs .in,.tabs .lgwarp{background:linear-gradient(172deg,rgba(255,255,255,.17),rgba(255,255,255,.05) 46%,rgba(255,255,255,.09)),rgba(20,14,28,.64)!important;-webkit-backdrop-filter:blur(28px) saturate(190%) brightness(1.04);backdrop-filter:blur(28px) saturate(190%) brightness(1.04)}
+.tabs .in{background:none!important;box-shadow:var(--gl-3-rim),0 22px 44px -14px rgba(0,0,0,.85),0 0 40px -18px var(--tint-glow)!important}
+.tabs .lgrim{opacity:.5!important}
+.tabs .thumb .pill{background:linear-gradient(165deg,color-mix(in srgb,var(--tint-hi) 36%,transparent),color-mix(in srgb,var(--tint) 24%,transparent) 48%,color-mix(in srgb,var(--tint-lo) 34%,transparent))!important;
+  box-shadow:inset 1px 1px .5px rgba(255,255,255,.32),inset -1px -1px .5px rgba(255,255,255,.1),0 0 24px -6px var(--tint-glow)!important}
+.tabs button{color:var(--ink3)}
+.tabs button[aria-current="page"]{color:#fff}
+.tabs button[aria-current="page"] svg{stroke:var(--tint-ink);filter:drop-shadow(0 0 7px var(--tint-glow))}
+
+/* ---------- 面板：一整块厚玻璃。遮罩已经把后面模糊了，面板自己只要半透明 ---------- */
+.shade{-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.has-sheet:not(.sheet-closing) .page{filter:brightness(.6)!important}
+.sheet{--bg:var(--bg-up);--card:var(--card-up);
+  background:radial-gradient(92% 30% at 0% 0%,rgb(var(--lf-a) / .2),transparent 72%),radial-gradient(86% 28% at 100% 0%,rgb(var(--lf-b) / .2),transparent 72%),
+    linear-gradient(180deg,rgba(48,40,60,.72) 0%,rgba(26,20,34,.86) 28%,rgba(13,10,18,.94) 100%)!important;
+  box-shadow:inset 0 1px .5px rgba(255,255,255,.4),inset 1px 0 .5px rgba(255,255,255,.1),inset -1px 0 .5px rgba(255,255,255,.07),0 -24px 70px rgba(0,0,0,.6)!important}
+.sheet.logsheet,.sheet.favsheet{
+  background:radial-gradient(130% 56% at 50% 122%,color-mix(in srgb,var(--tint) 78%,transparent),color-mix(in srgb,var(--tint-lo) 40%,transparent) 46%,transparent 74%),
+    radial-gradient(92% 30% at 0% 0%,rgb(var(--lf-a) / .16),transparent 72%),radial-gradient(86% 28% at 100% 0%,rgb(var(--lf-b) / .2),transparent 72%),
+    linear-gradient(180deg,rgba(48,40,60,.72) 0%,rgba(26,20,34,.86) 28%,rgba(13,10,18,.94) 100%)!important}
+.favbot2{background:none}
+.favbot2 .pillbtn,.favbot2 .circbtn{background:var(--gl-3);box-shadow:var(--gl-3-rim),var(--gl-3-drop);-webkit-backdrop-filter:var(--gl-blur);backdrop-filter:var(--gl-blur)}
+.cta{background:linear-gradient(to top,#0e0b13 62%,transparent)}
+.sheet .grab i{background:rgba(255,255,255,.28)}
+
+/* ---------- 封面：一块有颜色的厚玻璃 ---------- */
+/* 计划面：光从左上打进来（偏橘），越往右下越深、越冷（偏紫红）；上面斜着一道反光 */
+.cv-red,.dp-red{background:
+  linear-gradient(118deg,transparent 30%,rgba(255,255,255,.1) 42%,rgba(255,255,255,.02) 52%,transparent 62%),
+  radial-gradient(130% 104% at -6% -12%,var(--tint-hi) 0%,color-mix(in oklab,var(--tint-hi) 34%,var(--tint)) 16%,var(--tint) 40%,var(--tint-lo) 78%,var(--tint-deep) 116%)}
+/* 饮食面：一块烟色玻璃，上半透着后面的光，下面沉着一汪发亮的主题色 */
+.cv-dark{background:
+  radial-gradient(100% 62% at 0% 0%,rgba(255,255,255,.1),transparent 62%),
+  linear-gradient(180deg,rgba(44,36,56,.56) 0%,rgba(20,14,28,.66) 42%,color-mix(in srgb,var(--tint-lo) 52%,rgba(16,8,20,.8)) 72%,color-mix(in oklab,var(--tint) 86%,var(--tint-lo)) 100%)}
+.cv-glow{background:radial-gradient(closest-side,var(--tint-hi),var(--tint) 36%,color-mix(in srgb,var(--tint-lo) 50%,transparent) 68%,transparent)}
+.cover::after{background:linear-gradient(158deg,rgba(255,255,255,.62),rgba(255,255,255,.1) 28%,rgba(255,255,255,.04) 60%,color-mix(in srgb,var(--tint-hi) 88%,#fff))}
+.cover::before{background:linear-gradient(90deg,var(--tint-lo),var(--tint) 45%,var(--tint-hi));opacity:.6}
+.fsw{background:rgba(10,4,14,.34);box-shadow:var(--well-rim)}
+/* 开关上的滑块：在饮食面是一粒主题色玻璃，滑到计划面（底已经是主题色了）变成透明的亮玻璃 */
+.fsw .th i{background:linear-gradient(168deg,color-mix(in srgb,rgba(255,255,255,.44) calc(var(--pv,0) * 100%),color-mix(in oklab,var(--tint-hi) 52%,var(--tint))),color-mix(in srgb,rgba(255,255,255,.16) calc(var(--pv,0) * 100%),var(--tint-lo)));
+  box-shadow:inset 1px 1px .5px rgba(255,255,255,.55),inset -1px -1px .5px rgba(255,255,255,.16),0 4px 14px -4px rgba(0,0,0,.5)}
+.cv-ic{background:rgba(10,4,14,.3);box-shadow:var(--gl-2-rim)}
+.cv-bar .trk{background:linear-gradient(90deg,color-mix(in srgb,var(--tint-lo) 44%,rgba(10,4,14,.7)),rgba(10,4,14,.5) 70%,color-mix(in srgb,var(--tint) 30%,rgba(10,4,14,.6)));
+  box-shadow:inset 0 1.5px 3px rgba(0,0,0,.6),inset 0 -1px 0 rgba(255,255,255,.1),inset 0 0 0 1px color-mix(in srgb,var(--tint) 30%,transparent)}
+.cv-bar .trk i{background:linear-gradient(180deg,rgba(255,255,255,.34),transparent 46%),linear-gradient(90deg,var(--tint-lo),var(--tint) 52%,var(--tint-hi));box-shadow:0 0 18px var(--tint-glow)}
+.dp-glow{background:radial-gradient(50% 58% at 50% 100%,var(--tint-hi) 0%,var(--tint) 24%,color-mix(in srgb,var(--tint-lo) 46%,transparent) 54%,transparent 78%)}
+.cv-mac>div+div{border-left-color:rgba(255,255,255,.16)}
+
+/* ---------- 进度、数字、小亮点 ---------- */
+.cbar i,.xpbar i{background:linear-gradient(180deg,rgba(255,255,255,.3),transparent 50%),linear-gradient(90deg,var(--tint-lo),var(--tint) 55%,var(--tint-hi))}
+.sdots i.on{background:linear-gradient(180deg,#ffc79a,var(--k-h) 55%,#d93a52);box-shadow:inset 0 1px .5px rgba(255,255,255,.5),0 0 12px -2px rgba(254,116,91,.75)}
+.leafbar i{background:linear-gradient(to top,#1f8a52,#b4f2a5)}
+.logo,.bigt,.dayttl h1,.daypager h1{background:linear-gradient(176deg,#fff 34%,color-mix(in oklab,#fff 58%,var(--tint-hi)) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.wcard .wv,.pstats b{background:linear-gradient(180deg,#fff 28%,color-mix(in oklab,#fff 62%,rgb(var(--lf-b))));-webkit-background-clip:text;background-clip:text}
+.probadge{background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(255,255,255,.76));box-shadow:inset 0 -1px .5px rgba(0,0,0,.12),0 0 16px -4px rgba(255,255,255,.55)}
+.calsel i,.hseg .th{background:linear-gradient(180deg,#fff,#e6e0f0);box-shadow:inset 0 -1px 0 rgba(0,0,0,.14),0 0 0 .5px rgba(255,255,255,.5),0 10px 24px -8px var(--k,var(--tint)),0 0 30px -10px var(--k,var(--tint))}
+.wd.now{background:linear-gradient(180deg,rgba(255,255,255,.05),color-mix(in srgb,var(--tint) 22%,transparent));box-shadow:inset 1px 1px .5px rgba(255,255,255,.2),inset 0 0 0 1px color-mix(in srgb,var(--tint) 46%,transparent)}
+.wd.now b{background:radial-gradient(90% 80% at 30% 14%,rgba(255,255,255,.35),transparent 55%),color-mix(in srgb,var(--tint) 46%,var(--tint-deep));box-shadow:inset 0 0 0 1.5px var(--tint),0 0 16px -4px var(--tint-glow)}
+.vf{background:radial-gradient(80% 60% at 50% 40%,rgba(255,255,255,.08),rgba(4,2,8,.4));box-shadow:var(--well-rim)}
+.rail{background:var(--well);box-shadow:var(--well-rim)}
+.mehero{background:linear-gradient(180deg,color-mix(in srgb,var(--tint) 24%,transparent),transparent 88%)}
+.mh-bg .l2{background:rgb(var(--lf-b))}
+.tcv{box-shadow:inset 1px 1px .5px rgba(255,255,255,.34),inset -1px -1px .5px rgba(255,255,255,.1),0 18px 30px -18px var(--c)}
+.tcard[aria-pressed="true"] .tcv{box-shadow:inset 1px 1px .5px rgba(255,255,255,.4),0 0 0 2px var(--c),0 0 30px -6px var(--c)}
+/* 碗的影子：往右下落，颜色用封面最深的那段（以前是往左的黑影，被卡片边切出一道竖线） */
+.hero-bowl{filter:drop-shadow(8px 16px 18px color-mix(in srgb,var(--tint-deep) 78%,transparent))}
+/* 小标题前的圆点：一粒发光的珠子 */
+.sech .dot{background:radial-gradient(circle at 34% 30%,var(--tint-hi),var(--tint) 60%,var(--tint-lo))}

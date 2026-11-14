@@ -25,10 +25,10 @@ export const HeroBowl = () => html`<svg class="hero-bowl" viewBox="0 0 260 320" 
     <radialGradient id="hb-meat" cx="40%" cy="30%" r="80%"><stop offset="0" style="stop-color:#e3d5c3" /><stop offset=".6" style="stop-color:#9c8b78" /><stop offset="1" style="stop-color:#4a4038" /></radialGradient>
     <radialGradient id="hb-yolk" cx="40%" cy="35%" r="70%"><stop offset="0" style="stop-color:#ffd27a" /><stop offset=".7" style="stop-color:#e8922c" /><stop offset="1" style="stop-color:#9a4e14" /></radialGradient>
     <radialGradient id="hb-broc" cx="40%" cy="30%" r="75%"><stop offset="0" style="stop-color:#8fb57f" /><stop offset=".6" style="stop-color:#3c5e3b" /><stop offset="1" style="stop-color:#16251a" /></radialGradient>
-    <radialGradient id="hb-haze" cx="50%" cy="55%" r="50%"><stop offset="0" style="stop-color:var(--tint);stop-opacity:.55" /><stop offset="1" style="stop-color:var(--tint);stop-opacity:0" /></radialGradient>
+    <radialGradient id="hb-haze" cx="50%" cy="55%" r="50%"><stop offset="0" style="stop-color:var(--tint-hi,var(--tint));stop-opacity:.5" /><stop offset=".55" style="stop-color:var(--tint);stop-opacity:.22" /><stop offset="1" style="stop-color:var(--tint);stop-opacity:0" /></radialGradient>
     <filter id="hb-soft"><feGaussianBlur stdDeviation="2.4" /></filter>
   </defs>
-  <ellipse cx="130" cy="200" rx="130" ry="110" fill="url(#hb-haze)" />
+  <ellipse cx="146" cy="196" rx="104" ry="104" fill="url(#hb-haze)" />
   <g class="hb-steam" filter="url(#hb-soft)">
     <path d="M100 150c-14-22 14-34 0-60s10-40 2-62" />
     <path d="M134 140c-14-22 14-34 0-60s10-40 2-70" />
