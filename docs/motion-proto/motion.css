@@ -1,0 +1,293 @@
+/* 饭票 1.8.0 动效样例 —— 这个文件里的东西就是要搬进 www/styles.css 的。
+   曲线只用老的三条：--smooth（面板、页面） --out（进度、数字） --spring（回弹）。
+   编号 #01… 对应 docs/动效设计-1.8.0.md 里的清单。 */
+
+/* ---------- 调色 ---------- */
+/* 让颜色变量可以平滑过渡（封面换色、主题换色都靠它） */
+@property --g1{syntax:"<color>";inherits:true;initial-value:#38c8ff}
+@property --g2{syntax:"<color>";inherits:true;initial-value:#2f7df6}
+@property --g3{syntax:"<color>";inherits:true;initial-value:#5a45e6}
+@property --g4{syntax:"<color>";inherits:true;initial-value:#27206b}
+@property --n{syntax:"<integer>";inherits:false;initial-value:0}
+:root{
+  /* 三种日型 = 三种天色：高碳是黄昏的火，中碳是清晨的蜜，低碳是白天的湖 */
+  --k-h:#f0483a; --k-m:#e6960a; --k-l:#0aa39e;
+  --k-h-soft:rgba(240,72,58,.12); --k-m-soft:rgba(230,150,10,.14); --k-l-soft:rgba(10,163,158,.12);
+  --kg-h:linear-gradient(to top,#ff3d6e,#ff8a3d 62%,#ffc46b);
+  --kg-m:linear-gradient(to top,#ff9a3d,#ffc857 62%,#ffeaa0);
+  --kg-l:linear-gradient(to top,#2f7df6,#22c8d8 62%,#7af0d0);
+}
+/* 主题色：五选一，只换 --tint 这一族 */
+:root[data-accent="berry"]{--tint:#ff4d5e;--tint-soft:#ffe9eb;--tint-ink:#d42a3c}
+:root[data-accent="pine"]{--tint:#00a884;--tint-soft:#dff7ef;--tint-ink:#00785e}
+:root[data-accent="iris"]{--tint:#7a5cff;--tint-soft:#eee9ff;--tint-ink:#5a3fe0}
+:root[data-accent="persimmon"]{--tint:#f5820a;--tint-soft:#ffefd9;--tint-ink:#b85c00}
+/* #93 封面跟着日型换天色（只在「节奏」那一面），四个颜色 0.9 秒渐变 */
+.hero.cov{transition:--g1 .9s var(--out),--g2 .9s var(--out),--g3 .9s var(--out),--g4 .9s var(--out),transform .7s var(--spring)}
+.hero.cov.kd-L{--g1:#5ff0d0;--g2:#19b3d6;--g3:#2f6df6;--g4:#1c2a7a}
+.hero.cov.kd-M{--g1:#ffe08a;--g2:#ffb23d;--g3:#ff7a4d;--g4:#b8456b}
+.hero.cov.kd-H{--g1:#ffc46b;--g2:#ff6a3d;--g3:#ff2d6f;--g4:#7a1f6b}
+
+/* ---------- #01–#06 换日：◂ 今天 ▸ ---------- */
+.daypager{display:flex;align-items:center;gap:6px;padding:6px 4px 0}
+.daypager h1{font-size:34px;line-height:1.15;margin:0;font-weight:800;letter-spacing:-.02em;animation:dayin .55s var(--out)}
+.daypager .sub{margin-left:auto;font-size:14px;font-weight:600;color:var(--ink2);animation:dayin .55s var(--out) .06s backwards}
+.daypager .arw{width:34px;height:34px;border:0;border-radius:50%;background:none;display:grid;place-items:center;transition:transform .3s var(--spring),background-color .2s}
+.daypager .arw svg{width:18px;height:18px;fill:var(--ink3);transition:fill .2s}
+.daypager .arw:active{transform:scale(.8);background:var(--fill)}            /* #01 箭头按下缩一下 */
+.daypager .arw:active svg{fill:var(--tint)}
+@keyframes dayin{from{opacity:0;transform:translateX(calc(var(--dir,1) * 26px));filter:blur(8px)}}   /* #02 标题从换的方向滑进来 */
+/* #03–#05 三层错开滑：封面走 36px、快捷栏 60px、小卡 84px，越下面走得越远，有前后层次 */
+.view.dayflip>.hero{animation:layer .6s var(--out) backwards;--far:36px}
+.view.dayflip>.dock{animation:layer .6s var(--out) .05s backwards;--far:60px}
+.view.dayflip>.wgrid{animation:layer .6s var(--out) .1s backwards;--far:84px}
+@keyframes layer{from{opacity:0;transform:translateX(calc(var(--dir,1) * var(--far)));filter:blur(6px)}}
+.daypager .dots{display:flex;gap:4px;margin-left:8px}
+.daypager .dots i{width:5px;height:5px;border-radius:50%;background:var(--ink3);transition:width .4s var(--spring),background-color .3s}
+.daypager .dots i.on{width:16px;background:var(--tint)}                      /* #06 小圆点里当天那颗拉长 */
+
+/* ---------- #07–#16 封面上的「热量 / 节奏」开关 ---------- */
+.hseg{position:relative;display:inline-flex;padding:3px;border-radius:999px}
+.hseg button{position:relative;z-index:1;border:0;background:none;color:rgba(255,255,255,.82);font-size:13.5px;font-weight:700;padding:5px 14px;min-height:30px;transition:color .3s}
+.hseg button[aria-pressed="true"]{color:var(--g3)}
+.hseg .th{position:absolute;top:3px;bottom:3px;left:3px;width:calc(50% - 3px);border-radius:999px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.18);
+  transform:translateX(calc(var(--at,0) * 100%));transition:transform .5s var(--smooth)}                   /* #07 白色滑块滑过去 */
+.hseg .th i{position:absolute;inset:0;border-radius:inherit;background:inherit;animation:liquid .55s var(--smooth)}   /* #08 到位时像水滴挤一下（key 换了就重播） */
+.faces{display:grid}
+.face{grid-area:1/1;display:flex;flex-direction:column;gap:14px;min-width:0;transition:opacity .26s ease,transform .36s var(--smooth),filter .26s}
+.face.off{opacity:0;transform:translateY(-10px) scale(.98);filter:blur(8px);pointer-events:none}           /* #09 旧的一面往上淡出、变糊 */
+.face.on>*{animation:facein .6s var(--out) backwards;animation-delay:calc(var(--i,0) * 55ms + 90ms)}       /* #10 新的一面一行一行浮上来 */
+@keyframes facein{from{opacity:0;transform:translateY(16px);filter:blur(10px)}}
+/* 节奏面：一周的小柱子 */
+.wk{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;height:112px}
+.wk .b{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px}
+.wk .b i{position:relative;display:block;width:100%;height:calc(var(--h) * (100% - 24px));border-radius:10px;background:rgba(255,255,255,.34);
+  box-shadow:inset 0 1px 1px -.5px rgba(255,255,255,.8);transform-origin:50% 100%;animation:barup .9s var(--spring) backwards;animation-delay:calc(var(--i) * 45ms + 160ms)}   /* #11 柱子从下往上弹出来 */
+@keyframes barup{from{transform:scaleY(.04);opacity:.2}}
+.wk .b.hi i{background:linear-gradient(to top,rgba(255,255,255,.7),#fff);box-shadow:0 0 18px rgba(255,255,255,.6)}
+.wk .b.now i::after{content:"";position:absolute;inset:-5px -5px 19px;border-radius:14px;border:2px solid #fff;animation:nowring 2.4s var(--out) 1s infinite}   /* #12 今天那根外面一圈光在呼吸 */
+@keyframes nowring{0%{opacity:.95;transform:scale(1)}70%,100%{opacity:0;transform:scale(1.18,1.08)}}
+.wk .b span{font-size:11.5px;font-weight:700;color:rgba(255,255,255,.78);animation:fadein .5s var(--out) backwards;animation-delay:calc(var(--i) * 45ms + 420ms)}   /* #13 星期字跟着亮 */
+.wk .b.now span{color:#fff}
+.wk::after{content:"";position:absolute;inset:0 auto 24px 0;width:42px;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);
+  transform:translateX(-60px);animation:scan 1.1s var(--out) .85s}                                       /* #14 柱子长好后，一道光从左扫到右 */
+.wk{position:relative;overflow:hidden;border-radius:12px}
+@keyframes scan{to{transform:translateX(420px)}}
+.kdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#fff;margin-right:6px;box-shadow:0 0 0 0 rgba(255,255,255,.7);animation:kdot 2.2s var(--out) infinite}   /* #15 日型小圆点一圈圈往外散 */
+@keyframes kdot{70%,100%{box-shadow:0 0 0 9px rgba(255,255,255,0)}}
+/* #16 大数字用纯 CSS 往上数（--n 是整数变量） */
+.cnt{counter-reset:n var(--n);animation:cnt 1.3s var(--out) .15s backwards}
+.cnt::after{content:counter(n)}
+@keyframes cnt{from{--n:0}}
+
+/* ---------- #17–#24 快捷栏：中间大、两边小的一排 ---------- */
+.dock{display:flex;gap:0;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px calc(50% - 44px) 2px;margin-inline:-16px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.dock::-webkit-scrollbar{display:none}
+.dock .dk{flex:none;width:88px;scroll-snap-align:center;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:6px 0;
+  transform:scale(calc(1.16 - var(--d,1) * .3));opacity:calc(1 - var(--d,1) * .58);transition:transform .25s var(--out),opacity .25s;   /* #17 离中间越远越小越淡（--d 由滚动算） */
+  animation:dkin .7s var(--spring) backwards;animation-delay:calc(var(--i) * 60ms + 200ms)}             /* #18 一个个从右边滑进来 */
+@keyframes dkin{from{opacity:0;translate:70px 0}}
+.dock .dk .ic{width:46px;height:46px;border-radius:16px;display:grid;place-items:center;background:var(--tint-soft);transition:background-color .4s,transform .4s var(--spring),box-shadow .4s}
+.dock .dk svg{width:25px;height:25px;fill:none;stroke:var(--tint);stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:stroke .4s}
+.dock .dk.mid .ic{background:var(--tint);box-shadow:0 8px 18px -6px var(--tint);transform:translateY(-2px)}   /* #19 滚到中间那个：底色填满、浮起来 */
+.dock .dk.mid svg{stroke:#fff}
+.dock .dk.mid svg path{stroke-dasharray:1;animation:draw1 .7s var(--out)}                               /* #20 中间那个图标重新画一遍线 */
+@keyframes draw1{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+.dock .dk b{font-size:12.5px;font-weight:600;color:var(--ink2);transition:color .3s,font-weight .3s}
+.dock .dk.mid b{color:var(--ink);font-weight:800}                                                       /* #21 中间的字变黑变粗 */
+.dock .dk:active .ic{transform:scale(.84);transition-duration:.12s}                                     /* #22 按下去缩 */
+.dock .dk .ic::after{content:"";position:absolute;width:46px;height:46px;border-radius:16px;border:2px solid var(--tint);opacity:0}
+.dock .dk.tap .ic::after{animation:ringout .6s var(--out)}                                              /* #23 松手冒一圈环 */
+.dock .dk.tap .ic{animation:stamp .5s var(--spring)}                                                    /* #24 图标像盖章一样弹一下 */
+@keyframes stamp{0%{scale:.84}55%{scale:1.14}100%{scale:1}}
+
+/* ---------- #25–#38 小卡片格子 ---------- */
+.wgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.wcard{position:relative;border-radius:24px;padding:14px 14px 13px;min-height:132px;display:flex;flex-direction:column;gap:4px;overflow:hidden;text-align:left;font:inherit;color:var(--ink);
+  animation:winl .75s var(--out) backwards;animation-delay:calc((var(--r) + var(--c)) * 70ms + 260ms);transition:transform .35s var(--spring)}   /* #25 按斜线顺序一张张浮上来 */
+@keyframes winl{from{opacity:0;transform:translateY(28px) scale(.94);filter:blur(8px)}}
+.wcard:active{transform:scale(.965)}                                                                    /* #26 按住缩一点 */
+.wcard::before{content:"";position:absolute;inset:0;background:radial-gradient(140px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--tint) 16%,transparent),transparent 70%);opacity:0;transition:opacity .4s}
+.wcard:active::before{opacity:1;transition-duration:.1s}                                                /* #27 指尖下面一团主题色的光 */
+.wcard .wt{font-size:13.5px;font-weight:600;color:var(--ink2);display:flex;justify-content:space-between;align-items:center}
+.wcard .wt svg{width:14px;height:14px;fill:none;stroke:var(--ink3);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s var(--spring)}
+.wcard:active .wt svg{transform:translateX(4px)}                                                        /* #28 右上角小箭头往右顶一下 */
+.wcard .wv{font-family:var(--f-num);font-size:30px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.wcard .wv small{font-size:13px;font-weight:700;color:var(--ink2);margin-left:3px;font-family:var(--f-body)}
+.wcard .delta{align-self:flex-start;font-size:12px;font-weight:700;color:var(--green-ink);background:var(--green-soft);border-radius:999px;padding:1px 8px;animation:pop .5s var(--spring) .9s backwards}   /* #29 「−0.4」小标签晚一点弹出来 */
+.spk{width:100%;height:44px;margin-top:auto;overflow:visible}
+.spk .ln{fill:none;stroke:var(--tint);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:draw1 1.2s var(--out) .55s forwards}   /* #30 折线从左画到右 */
+.spk .ar{fill:url(#spk);opacity:0;animation:fadein .8s var(--out) 1.1s forwards}                      /* #31 线下面的淡色面积后亮起来 */
+.spk .pt{fill:var(--card);stroke:var(--tint);stroke-width:2.6;transform-box:fill-box;transform-origin:center;animation:ptpop .5s var(--spring) 1.55s backwards}   /* #32 最后一个点弹出来 */
+@keyframes ptpop{from{transform:scale(0)}}
+.spk .halo{fill:var(--tint);opacity:0;transform-box:fill-box;transform-origin:center;animation:halo 2.4s var(--out) 2s infinite}   /* #33 最后一个点一直有一圈光散开 */
+@keyframes halo{0%{opacity:.35;transform:scale(1)}80%,100%{opacity:0;transform:scale(3.4)}}
+.tri{position:relative;width:86px;height:86px;margin:2px auto 0}
+.tri svg{width:100%;height:100%;transform:rotate(-90deg)}
+.tri circle{fill:none;stroke-width:9;stroke-linecap:round}
+.tri .tr{stroke:var(--fill)}
+.tri .a{stroke-dasharray:var(--len) 1;stroke-dashoffset:var(--len);animation:arc .9s var(--out) forwards;animation-delay:calc(var(--i) * 140ms + 600ms)}   /* #34 三段彩色弧一段接一段画出来 */
+@keyframes arc{to{stroke-dashoffset:0}}
+.tri b{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--f-num);font-size:19px;font-weight:800}
+.legend{display:flex;justify-content:space-between;font-size:11.5px;font-weight:700;color:var(--ink2);margin-top:6px}
+.legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;animation:pop .4s var(--spring) backwards;animation-delay:calc(var(--i) * 140ms + 900ms)}   /* #35 图例小点跟着弧一个个冒出来 */
+.gauge{position:relative;width:100%;height:60px;margin-top:auto}
+.gauge svg{width:100%;height:100%;overflow:visible}
+.gauge .tk{fill:none;stroke:var(--fill2);stroke-width:8;stroke-linecap:round}
+.gauge .fl{fill:none;stroke:var(--na);stroke-width:8;stroke-linecap:round;stroke-dasharray:var(--v) 1;stroke-dashoffset:var(--v);animation:arc 1.1s var(--out) .7s forwards}   /* #36 半圆表盘填上去 */
+.gauge .nd{transform-origin:60px 56px;transform:rotate(calc(var(--v) * 180deg - 90deg));animation:needle 1.3s var(--spring) .7s backwards}   /* #37 指针甩过去，过头一点再回来 */
+@keyframes needle{from{transform:rotate(-90deg)}}
+.leafbar{display:flex;gap:4px;margin-top:auto;align-items:flex-end;height:40px}
+.leafbar i{flex:1;border-radius:5px;background:var(--fb);opacity:.28;height:calc(var(--h) * 100%);transform-origin:50% 100%;animation:barup .7s var(--spring) backwards;animation-delay:calc(var(--i) * 40ms + 700ms)}   /* #38 七根小柱子依次长高 */
+.leafbar i.ok{opacity:1}
+
+/* ---------- #39–#52 推进去的详情页（过场） ---------- */
+.push{position:fixed;inset:0;z-index:30;background:var(--bg);overflow-y:auto;transform:translateX(100%);transition:transform .52s var(--smooth);will-change:transform}
+.pushing .push{transform:none;box-shadow:-30px 0 60px rgba(0,0,0,.18)}                                  /* #39 新页从右边整页推进来 */
+.pushing .page{transform:translateX(-26%) scale(.96);filter:brightness(.8)}                             /* #40 旧页往左退、变暗、缩一点 */
+.pushing .tabs{transform:translateY(160%)}                                                              /* #41 底下的标签栏沉下去 */
+.pcover{position:relative;height:330px;overflow:hidden;isolation:isolate;color:#fff;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px 20px;
+  background:linear-gradient(160deg,var(--g1),var(--g2) 45%,var(--g3) 80%,var(--g4))}
+.pcover .mesh{position:absolute;inset:-20%;z-index:-2;filter:blur(40px) saturate(125%)}
+.pcover .mesh i{position:absolute;border-radius:50%;opacity:.9}
+.pcover .mesh .m1{width:62%;height:62%;left:-6%;top:-10%;background:var(--g1);animation:cd1 16s ease-in-out infinite alternate}   /* #42 封面里的色块一直慢慢流动 */
+.pcover .mesh .m2{width:58%;height:58%;right:-8%;top:8%;background:var(--g2);animation:cd2 19s ease-in-out infinite alternate}
+.pcover .mesh .m3{width:66%;height:66%;left:10%;bottom:-18%;background:var(--g3);animation:cd3 22s ease-in-out infinite alternate}
+.pcover::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(to top,rgba(0,0,0,.42),transparent 55%)}
+.pcover{transform-origin:50% 0;transform:scale(calc(1 + var(--pull,0) * .0016));}                        /* #43 往下拉时封面放大（橡皮筋） */
+.pcover .wk{height:150px;margin-bottom:14px}
+.pushing .pcover .wk .b i{animation-delay:calc(var(--i) * 45ms + 380ms)}
+.back{position:fixed;left:16px;top:calc(env(safe-area-inset-top,0px) + 14px);z-index:3;width:42px;height:42px;border-radius:50%;border:0;display:grid;place-items:center;color:#fff;
+  opacity:0;transform:translateX(18px) scale(.7);transition:opacity .3s .25s,transform .5s var(--spring) .25s}
+.pushing .back{opacity:1;transform:none}                                                                /* #44 返回键晚一点弹出来 */
+.back:active{transform:scale(.86)!important;transition-duration:.12s!important}                         /* #45 返回键按下缩 */
+.back svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.pcover h2{margin:0;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.ptag{align-self:flex-start;border-radius:999px;padding:4px 12px;font-size:12.5px;font-weight:700;margin-bottom:10px}
+/* #46 详情页的字：从上到下一行一行「亮」起来（先是很淡的影子，再变清楚） */
+.rv{opacity:.0;transform:translateY(14px);filter:blur(6px)}
+.pushing .rv{animation:rvin .7s var(--out) forwards;animation-delay:calc(var(--i) * 70ms + 300ms)}
+@keyframes rvin{0%{opacity:0;transform:translateY(14px);filter:blur(6px)}45%{opacity:.35;filter:blur(1px)}100%{opacity:1;transform:none;filter:none}}
+.pbody{padding:18px 20px 60px;display:flex;flex-direction:column;gap:16px}
+.pstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pstats div{display:flex;flex-direction:column}
+.pstats b{font-family:var(--f-num);font-size:20px;font-weight:800}
+.pstats span{font-size:12.5px;color:var(--ink2);font-weight:600}
+.pbody p{margin:0;font-size:16px;line-height:1.6;color:var(--ink2)}
+.pbody h3{margin:6px 0 -4px;font-size:19px;font-weight:800}
+.prow{display:flex;align-items:center;gap:14px;border-radius:20px;padding:12px 14px;background:var(--card);transition:transform .35s var(--spring)}
+.prow:active{transform:scale(.975)}                                                                     /* #47 每一行按下缩一点 */
+.prow .no{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-family:var(--f-num);font-weight:800;font-size:17px;color:#fff;background:var(--kg)}
+.prow.k-H{--kg:var(--kg-h);--k:var(--k-h);--ks:var(--k-h-soft)} .prow.k-M{--kg:var(--kg-m);--k:var(--k-m);--ks:var(--k-m-soft)} .prow.k-L{--kg:var(--kg-l);--k:var(--k-l);--ks:var(--k-l-soft)}
+.prow .tx{flex:1;display:flex;flex-direction:column}
+.prow .tx b{font-size:16.5px}
+.prow .tx span{font-size:13px;color:var(--ink2);font-weight:600}
+.prow .pill{font-size:12.5px;font-weight:700;color:var(--k);background:var(--ks);border-radius:999px;padding:3px 10px}
+.pushing .prow .no{animation:noflip .7s var(--spring) backwards;animation-delay:calc(var(--i) * 70ms + 420ms)}   /* #48 行首的数字方块翻着出现 */
+@keyframes noflip{from{transform:rotateY(90deg) scale(.7);opacity:0}}
+.pgo{align-self:flex-start;border:0;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:700;font-size:16px;padding:0 22px 0 16px;min-height:48px;display:inline-flex;align-items:center;gap:8px;position:relative;overflow:hidden;transition:transform .35s var(--spring)}
+.pgo:active{transform:scale(.94)}                                                                       /* #49 「开始用」按下缩 */
+.pgo svg{width:16px;height:16px;fill:currentColor}
+.pgo::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;transform:skewX(-20deg);background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:sheen 4.5s var(--smooth) 1.6s infinite}   /* #50 按钮上隔一会儿扫一道光 */
+/* #51 小封面飞过去变成大封面（js：rememberCover + useCoverLanding）。飞的时候是这个样子 */
+.coverghost{box-shadow:0 20px 50px rgba(0,0,0,.3)}
+/* #52 返回：整页往右收，旧页回来（同 #39 #40 反着播，时间 .42s） */
+.popping .push{transition-duration:.42s;transition-timing-function:cubic-bezier(.4,0,.2,1)}
+
+/* ---------- #53–#66 面板升起来 + 选计划 ---------- */
+.has-sheet:not(.sheet-closing) .page{filter:brightness(.82) blur(3px)}                                  /* #53 面板出来时后面的页不光变暗缩小，还糊一点 */
+.sheet .grab i{animation:grabhint .9s var(--spring) .35s backwards}                                     /* #54 顶上的小横条先拉长再弹回，提示「能往下拖」 */
+@keyframes grabhint{from{width:70px;opacity:.4}}
+.sheet .sh h2{animation:facein .55s var(--out) .12s backwards}                                          /* #55 标题浮上来 */
+.sheet .x{animation:xin .6s var(--spring) .2s backwards}                                                /* #56 × 转着出现 */
+@keyframes xin{from{transform:rotate(-90deg) scale(.4);opacity:0}}
+.sheet .x:active svg{transform:rotate(90deg);transition:transform .3s var(--spring)}                    /* #57 × 按下转 90 度 */
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pcard{position:relative;border:0;background:none;padding:0;text-align:left;font:inherit;color:var(--ink);display:flex;flex-direction:column;gap:7px;
+  animation:winl .65s var(--out) backwards;animation-delay:calc(var(--i) * 55ms + 180ms);transition:transform .35s var(--spring)}   /* #58 封面格子两两错开浮上来 */
+.pcard:active{transform:scale(.955)}                                                                    /* #59 按住缩 */
+.pcard .cv{position:relative;aspect-ratio:1.24;border-radius:20px;overflow:hidden;display:flex;align-items:flex-end;padding:12px;
+  background:linear-gradient(150deg,var(--g1),var(--g2) 50%,var(--g3));transition:transform .5s var(--spring),box-shadow .4s}
+.pcard .cv::before{content:"";position:absolute;inset:-30%;background:radial-gradient(50% 50% at 30% 20%,rgba(255,255,255,.45),transparent 70%);animation:cd1 14s ease-in-out infinite alternate}   /* #60 每张小封面里有一块光慢慢移 */
+.pcard .mini{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;align-items:end;width:100%;height:58%}
+.pcard .mini i{border-radius:5px;background:rgba(255,255,255,.4);height:calc(var(--h) * 100%);transform-origin:50% 100%;animation:barup .7s var(--spring) backwards;animation-delay:calc(var(--i) * 55ms + var(--j) * 30ms + 320ms)}   /* #61 小封面里的柱子也会长 */
+.pcard .mini i.hi{background:#fff}
+.pcard b{font-size:16px;font-weight:700;padding-left:2px}
+.pcard small{font-size:12.5px;color:var(--ink2);font-weight:600;padding-left:2px;margin-top:-6px}
+/* 选中：一圈边从左上角画一整圈；右上角的勾弹出来 */
+.pcard .ringo{position:absolute;inset:-4px;border-radius:24px;padding:2.5px;background:conic-gradient(from -45deg,var(--tint) calc(var(--a,0) * 1turn),transparent 0);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);
+  --a:0;transition:--a .55s var(--out)}
+@property --a{syntax:"<number>";inherits:true;initial-value:0}
+.pcard[aria-pressed="true"] .ringo{--a:1}                                                                /* #62 选中的边转着画一圈 */
+.pcard[aria-pressed="true"] .cv{transform:scale(.94);box-shadow:0 10px 24px -10px var(--g2)}             /* #63 选中的封面往里收一点，像被框住 */
+.pcard .ck{position:absolute;right:8px;top:8px;width:26px;height:26px;border-radius:50%;background:var(--tint);display:grid;place-items:center;transform:scale(0);transition:transform .5s var(--spring) .12s;box-shadow:0 4px 10px rgba(0,0,0,.2)}
+.pcard[aria-pressed="true"] .ck{transform:none}                                                          /* #64 勾的小圆弹出来 */
+.pcard .ck svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset .3s var(--out) .3s}
+.pcard[aria-pressed="true"] .ck svg{stroke-dashoffset:0}                                                 /* #65 勾是画出来的 */
+.cta{position:sticky;bottom:0;margin:6px -4px -8px;padding:10px 4px 6px;background:linear-gradient(to top,var(--bg) 62%,transparent)}
+.cta .btn{width:100%}
+.cta .tk{display:inline-block;animation:tick .4s var(--out)}                                             /* #66 底下大按钮里的计划名字从下面翻上来（key 换了就重播） */
+.cta .btn.bump{animation:bump .45s var(--spring)}
+@keyframes bump{40%{transform:scale(1.035)}}
+
+/* ---------- #67–#74 换主题色（过场） ---------- */
+.tdots{display:flex;gap:6px;justify-content:space-between;position:relative;padding:4px 2px}
+.tdot{position:relative;width:52px;height:52px;border-radius:50%;border:0;background:none;display:grid;place-items:center;animation:pop .5s var(--spring) backwards;animation-delay:calc(var(--i) * 60ms + 200ms)}   /* #67 五个色点依次弹出来 */
+.tdot i{width:30px;height:30px;border-radius:50%;background:var(--c);box-shadow:inset 0 2px 3px rgba(255,255,255,.5),0 4px 10px -3px var(--c);transition:transform .45s var(--spring)}
+.tdot:active i{transform:scale(.78)}                                                                    /* #68 按下缩 */
+.tdot[aria-pressed="true"] i{transform:scale(1.12)}                                                     /* #69 选中的那颗稍微大一点 */
+.tring{position:absolute;left:2px;top:4px;width:52px;height:52px;border-radius:50%;border:2.5px solid var(--tint);pointer-events:none;
+  transform:translateX(var(--rx0,0px));transition:transform .6s var(--spring),border-color .5s}   /* #70 外面的圈从旧的滑到新的（--rx0 = 选中那颗的 offsetLeft，js 算） */
+/* #71 整个 App 换色：新颜色从点的地方像水一样漫开（View Transitions；不支持就普通渐变） */
+::view-transition-old(root){animation:none}
+::view-transition-new(root){animation:tflood .8s cubic-bezier(.65,0,.25,1)}   /* --tr = 从点到最远屏幕角的距离，js 算；这样水是匀速漫到边的 */
+@keyframes tflood{from{clip-path:circle(0 at var(--tx,50%) var(--ty,50%))}to{clip-path:circle(var(--tr,150vmax) at var(--tx,50%) var(--ty,50%))}}
+.tprev{border-radius:22px;padding:16px;display:flex;align-items:center;gap:14px}
+.tprev .sw{width:54px;height:54px;border-radius:17px;background:var(--tint);display:grid;place-items:center;transition:background-color .5s;animation:sway2 3.2s ease-in-out infinite}   /* #72 预览小方块一直轻轻摇 */
+@keyframes sway2{50%{transform:rotate(-6deg) translateY(-2px)}}
+.tprev .sw svg{width:28px;height:28px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.tprev b{font-size:17px}
+.tprev span{font-size:13.5px;color:var(--ink2)}
+.tname{display:inline-block;animation:tick .45s var(--out)}                                              /* #73 主题名字换的时候翻上来 */
+.tabs button[aria-current="page"],.link,.addbtn,.plannav .go,.caltoday{transition:color .5s}             /* #74 所有带主题色的字、图标一起慢慢变色 */
+
+/* ---------- #75–#88 日历 ---------- */
+.calwds{display:grid;grid-template-columns:repeat(7,1fr)}
+.calcells{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));row-gap:2px;animation:monthin .5s var(--out)}   /* #75 换月：整格从换的方向滑进来 */
+@keyframes monthin{from{opacity:0;transform:translateX(calc(var(--dir,1) * 34px));filter:blur(5px)}}
+.calcells .calc{position:relative;z-index:1;animation:cellin .5s var(--out) backwards;animation-delay:calc((var(--r) + var(--c)) * 22ms + 60ms)}   /* #76 日期按斜线一波一波出现 */
+@keyframes cellin{from{opacity:0;transform:scale(.6)}}
+.calcells .calc.sel{background:none}
+.calsel{position:absolute;left:0;top:0;width:calc(100% / 7);height:48px;border-radius:15px;z-index:0;
+  transform:translate(calc(var(--c) * 100%),calc(var(--r) * 50px));transition:transform .55s var(--smooth)}   /* #77 选中的黑块从旧日期滑到新日期 */
+.calsel i{position:absolute;inset:0;border-radius:inherit;background:var(--ink);box-shadow:0 8px 18px -8px var(--k,var(--ink));animation:liquid .55s var(--smooth)}   /* #78 黑块到位时像水滴挤一下；底下一圈当天日型颜色的光 */
+.calc .dn{transition:color .25s .1s}                                                                    /* #79 被选中的数字颜色跟着变白 */
+.calc.today:not(.sel)::after{content:"";position:absolute;inset:6px 9px;border-radius:12px;border:1.5px solid var(--tint);opacity:.0;animation:todayring 2.6s var(--out) 1s infinite}   /* #80 今天那格外面一圈光在呼吸 */
+@keyframes todayring{0%{opacity:.6;transform:scale(.9)}70%,100%{opacity:0;transform:scale(1.25)}}
+.calc .kb{transform-origin:50% 50%;animation:kbin .5s var(--spring) backwards;animation-delay:calc((var(--r) + var(--c)) * 22ms + 260ms)}   /* #81 日期下面的日型小条从中间往两边长 */
+@keyframes kbin{from{transform:scaleX(0)}}
+.calc .dot{animation:pop .45s var(--spring) backwards;animation-delay:calc((var(--r) + var(--c)) * 22ms + 340ms)}   /* #82 小圆点弹出来 */
+.calnav:active{transform:scale(.82);transition:transform .12s}                                          /* #83 翻月按钮按下缩 */
+.calnav svg{transition:transform .3s var(--spring)}
+.calnav:active svg{transform:translateX(var(--nx,3px))}                                                 /* #84 箭头往翻的方向顶一下 */
+.calh b{display:inline-block;animation:tick .45s var(--out)}                                            /* #85 「11 月」翻上来 */
+.calday>*{animation:facein .55s var(--out) backwards;animation-delay:calc(var(--i,0) * 60ms)}           /* #86 换一天：下面的详情一行行换 */
+.cdring .fl{animation:cdfill 1s var(--out) .15s backwards}                                              /* #87 当天完成度的环画出来 */
+@keyframes cdfill{from{stroke-dashoffset:1}}
+.kpill{animation:pop .5s var(--spring) .1s backwards}                                                   /* #88 日型小牌子弹出来 */
+.kpill::before{animation:breathe 2.4s ease-in-out infinite}
+
+/* ---------- #89–#92 封面展开成整页（过场）：首页的封面卡片直接长大，变成计划详情页的顶部 ---------- */
+.push.exp{transform:none;transition:clip-path .62s var(--smooth),opacity .18s;opacity:0;pointer-events:none;
+  clip-path:inset(var(--it,20%) var(--ir,16px) var(--ib,40%) var(--il,16px) round 30px)}
+.pushing .push.exp{opacity:1;pointer-events:auto;clip-path:inset(0 0 0 0 round 0px)}                    /* #89 从封面卡片的位置长成整页 */
+.pushing.exping .page{transform:scale(.96);filter:brightness(.8)}                                       /* #90 后面的页只缩小变暗，不往左退 */
+.popping .push.exp{transition:clip-path .5s var(--smooth),opacity .2s .34s}                             /* #91 返回：整页缩回那张封面卡片里 */
+.pushing .pcover h2{animation:chin .8s var(--out) .28s backwards}                                       /* #92 大标题带着模糊弹出来 */
+
+@media (prefers-reduced-motion:reduce){
+  .dock .dk{transform:none;opacity:1}
+  .push,.pushing .page{transition-duration:.2s}
+  ::view-transition-new(root){animation:none}
+}

@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>饭票 1.8.0 动效样例</title>
+<link rel="stylesheet" href="../../www/styles.css">
+<link rel="stylesheet" href="motion.css">
+<style>
+/* 只是样例页自己用的摆放，不用搬进 App */
+.hero.cov .ctop{gap:10px}
+.rlab{font-size:15px;font-weight:600;color:rgba(255,255,255,.9)}
+.rbig{font-size:30px;font-weight:800;letter-spacing:-.01em;line-height:1.15;margin-top:-10px}
+.rfoot{display:flex;justify-content:space-between;font-size:13px;font-weight:600;color:rgba(255,255,255,.9);margin-top:-4px}
+.shade[hidden]{display:none}
+.calcard .calc{height:48px}
+</style></head>
+<body>
+<div class="page"><div class="view" id="view">
+  <div class="daypager">
+    <button class="arw" aria-label="前一天" onclick="P.day(-1)"><svg viewBox="0 0 24 24"><path d="M15.5 5.5v13L6 12z"/></svg></button>
+    <h1 id="dtitle">今天</h1>
+    <button class="arw" aria-label="后一天" onclick="P.day(1)"><svg viewBox="0 0 24 24"><path d="M8.5 5.5v13L18 12z"/></svg></button>
+    <span class="dots"><i></i><i class="on"></i><i></i></span>
+    <span class="sub" id="dsub">11月14日 周六</span>
+  </div>
+
+  <section class="hero main cov tod-day" id="hero">
+    <div class="mesh" aria-hidden="true"><i class="m1"></i><i class="m2"></i><i class="m3"></i><i class="m4"></i></div>
+    <div class="cshade" aria-hidden="true"></div>
+    <div class="ctop">
+      <div class="hseg gl" id="hseg"><i class="th"><i></i></i>
+        <button aria-pressed="true" onclick="P.face('k')">热量</button><button aria-pressed="false" onclick="P.face('r')">节奏</button></div>
+      <button class="cchip gl"><i class="kdot"></i>低碳日<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+    </div>
+    <div class="faces">
+      <div class="face on" id="face-k">
+        <div class="cbig" style="--i:0"><span class="lab">今天还可以吃</span><div class="row"><b class="num"><span class="cnt" style="--n:1157"></span></b><em>千卡</em></div></div>
+        <div class="ctrack gl go" style="--i:1;--v:.38;--vp:.92"><div class="clip"><i class="plan"></i><i class="fill"></i></div><div class="kw"><i class="knob"></i></div></div>
+        <div class="ctl" style="--i:2"><span>已吃 <b class="num">709</b></span><span>目标 <span class="num">1,866</span> 千卡</span></div>
+        <div class="ctiles" style="--i:3">
+          <div class="ctile gl" style="--i:0;--v:.46;--vp:.9"><span class="tn">蛋白质</span><span class="tv"><b class="num">44</b><em>/96 克</em></span><span class="bar"><i class="pl"></i><i class="ea"></i></span></div>
+          <div class="ctile gl" style="--i:1;--v:.35;--vp:.95"><span class="tn">碳水</span><span class="tv"><b class="num">72</b><em>/206 克</em></span><span class="bar"><i class="pl"></i><i class="ea"></i></span></div>
+          <div class="ctile gl" style="--i:2;--v:.3;--vp:.88"><span class="tn">脂肪</span><span class="tv"><b class="num">28</b><em>/94 克</em></span><span class="bar"><i class="pl"></i><i class="ea"></i></span></div>
+        </div>
+      </div>
+      <div class="face off" id="face-r" onclick="P.expand()">
+        <span class="rlab" style="--i:0">三低一高 · 第 2 / 4 天</span>
+        <div class="rbig" style="--i:1">后天是高碳日</div>
+        <div class="wk" style="--i:2" id="wk"></div>
+        <div class="rfoot" style="--i:3"><span>这一周平均 <b class="num">2,310</b> 千卡</span><span>点一下看整个计划 ›</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="dock" id="dock"></div>
+
+  <div class="wgrid">
+    <button class="wcard card" style="--r:0;--c:0">
+      <span class="wt">今天体重<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      <span class="wv">60.4<small>kg</small></span><span class="delta">−0.4 这周</span>
+      <svg class="spk" viewBox="0 0 140 44"><defs><linearGradient id="spk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--tint)" stop-opacity=".22"/><stop offset="1" stop-color="var(--tint)" stop-opacity="0"/></linearGradient></defs>
+        <path class="ar" d="M2 14 L25 18 L48 12 L71 22 L94 20 L117 30 L136 26 V44 H2z"/><path class="ln" pathLength="1" d="M2 14 L25 18 L48 12 L71 22 L94 20 L117 30 L136 26"/>
+        <circle class="halo" cx="136" cy="26" r="4"/><circle class="pt" cx="136" cy="26" r="4"/></svg>
+    </button>
+    <button class="wcard card" style="--r:0;--c:1">
+      <span class="wt">三大营养<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      <div class="tri"><svg viewBox="0 0 86 86"><circle class="tr" cx="43" cy="43" r="34"/>
+        <circle class="a" cx="43" cy="43" r="34" pathLength="1" stroke="var(--c-p)" style="--i:0;--len:.2"/>
+        <circle class="a" cx="43" cy="43" r="34" pathLength="1" stroke="var(--c-cb)" style="--i:1;--len:.24;transform:rotate(100deg);transform-origin:center"/>
+        <circle class="a" cx="43" cy="43" r="34" pathLength="1" stroke="var(--c-fat)" style="--i:2;--len:.12;transform:rotate(214deg);transform-origin:center"/></svg><b>38%</b></div>
+      <div class="legend"><span><i style="--i:0;background:var(--c-p)"></i>蛋白</span><span><i style="--i:1;background:var(--c-cb)"></i>碳水</span><span><i style="--i:2;background:var(--c-fat)"></i>脂肪</span></div>
+    </button>
+    <button class="wcard card" style="--r:1;--c:0">
+      <span class="wt">钠<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      <span class="wv">1,420<small>/ 2000 mg</small></span>
+      <div class="gauge" style="--v:.71"><svg viewBox="0 0 120 60"><path class="tk" d="M12 56 A48 48 0 0 1 108 56"/><path class="fl" pathLength="1" d="M12 56 A48 48 0 0 1 108 56"/>
+        <g class="nd"><path d="M60 56 L60 20" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/><circle cx="60" cy="56" r="5" fill="var(--ink)"/></g></svg></div>
+    </button>
+    <button class="wcard card" style="--r:1;--c:1">
+      <span class="wt">膳食纤维<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span>
+      <span class="wv">18<small>/ 25 g</small></span>
+      <div class="leafbar" id="leaf"></div>
+    </button>
+  </div>
+
+  <div class="card cal calcard" id="cal">
+    <div class="calh"><button class="calnav" style="--nx:-3px" onclick="P.month(-1)"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <b id="calttl">2026 年 11 月</b><button class="calnav" onclick="P.month(1)"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button></div>
+    <div class="calwds" id="calwds"></div>
+    <div class="calcells" id="calcells"></div>
+    <div class="calday" id="calday"></div>
+  </div>
+</div></div>
+
+<nav class="tabs"><div class="in" data-idx="0"><i class="lgwarp"></i><i class="thumb" style="transform:translateX(0%)"><i class="pill"></i></i>
+  <button aria-current="page"><svg viewBox="0 0 24 24"><path d="M3 17a9 9 0 0 1 18 0M12 4v2M4.6 7.6l1.4 1.4M19.4 7.6 18 9M2 20h20"/></svg><span>今天</span></button>
+  <button><svg viewBox="0 0 24 24"><path d="M4 10h16l-1.6 9.2a1 1 0 0 1-1 .8H6.6a1 1 0 0 1-1-.8zM8 10l2.5-6M16 10l-2.5-6"/></svg><span>食物</span></button>
+  <button><svg viewBox="0 0 24 24"><path d="M5 20v-6M12 20V5M19 20v-9"/></svg><span>记录</span></button>
+  <button><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg><span>我的</span></button>
+  <i class="lgrim"></i></div></nav>
+
+<!-- 计划详情页（从封面展开） -->
+<div class="push exp" id="push">
+  <button class="back gl glass" onclick="P.pop()" aria-label="返回"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <div class="pcover" style="--g1:#5ff0d0;--g2:#19b3d6;--g3:#2f6df6;--g4:#1c2a7a">
+    <div class="mesh"><i class="m1"></i><i class="m2"></i><i class="m3"></i></div>
+    <div class="wk" id="wk2"></div>
+    <span class="ptag glass">碳循环 · 4 天一轮</span>
+    <h2>三低一高</h2>
+  </div>
+  <div class="pbody">
+    <button class="pgo rv" style="--i:0"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></svg>正在用这个计划</button>
+    <div class="pstats rv" style="--i:1"><div><b>4 天</b><span>一轮</span></div><div><b>2,310</b><span>平均千卡</span></div><div><b>96 g</b><span>蛋白每天吃够</span></div></div>
+    <p class="rv" style="--i:2">3 天低碳 + 1 天高碳。低碳日主食减半、脂肪多一点；高碳日把主食补回来。短周期冲刺，适合减脂平台期。</p>
+    <h3 class="rv" style="--i:3">这一轮怎么吃</h3>
+    <div class="prow k-L rv" style="--i:4"><span class="no">1</span><span class="tx"><b>1,866 千卡</b><span>蛋白 96　碳水 206　脂肪 94</span></span><span class="pill">低碳</span></div>
+    <div class="prow k-L rv" style="--i:5"><span class="no">2</span><span class="tx"><b>1,866 千卡</b><span>今天 · 蛋白 96　碳水 206　脂肪 94</span></span><span class="pill">低碳</span></div>
+    <div class="prow k-L rv" style="--i:6"><span class="no">3</span><span class="tx"><b>1,866 千卡</b><span>蛋白 96　碳水 206　脂肪 94</span></span><span class="pill">低碳</span></div>
+    <div class="prow k-H rv" style="--i:7"><span class="no">4</span><span class="tx"><b>3,174 千卡</b><span>蛋白 96　碳水 617　脂肪 53</span></span><span class="pill">高碳</span></div>
+  </div>
+</div>
+
+<!-- 面板：选计划 / 主题色 -->
+<div class="shade" id="shade" hidden><div class="sheet" role="dialog">
+  <div class="grab"><i></i></div>
+  <div class="sh"><h2 id="shttl">饮食计划</h2><button class="x" onclick="P.close()"><svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></svg></button></div>
+  <div class="sb" id="sb"></div>
+</div></div>
+
+<script>
+const $ = (s) => document.querySelector(s), root = document.documentElement;
+const H = { H: 1, M: 0.66, L: 0.4 };
+const replay = (el) => { const n = el.cloneNode(true); el.replaceWith(n); return n; };
+
+// 一周的小柱子
+const WK = "LLLHLLL", WD = "五六日一二三四";
+const wkHTML = () => [...WK].map((k, i) => `<div class="b${k === "H" ? " hi" : ""}${i === 1 ? " now" : ""}" style="--h:${H[k]};--i:${i}"><i></i><span>${i === 1 ? "今" : WD[i]}</span></div>`).join("");
+$("#wk").innerHTML = wkHTML(); $("#wk2").innerHTML = wkHTML();
+$("#leaf").innerHTML = [0.5, 0.8, 0.62, 1, 0.9, 0.44, 0.72].map((h, i) => `<i class="${h >= 0.7 ? "ok" : ""}" style="--h:${h};--i:${i}"></i>`).join("");
+
+// 快捷栏
+const DOCK = [["日历", "M5 6.5h14v13H5zM5 10.5h14M9 4v4M15 4v4"], ["饮食计划", "M5 19V13M10 19V8M15 19v-4M20 19V5"], ["食物库", "M11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14zM16 16l4.5 4.5"], ["说一句", "M5 6.5h14v9.5H10l-4 3.5v-3.5H5z"], ["拍一下", "M4 8.5h3.5L9 6h6l1.5 2.5H20V19H4zM12 16.2a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8z"], ["主题色", "M12 4a8 8 0 1 0 0 16c1.6 0 1.8-1.4 1.2-2.2-.8-1 .1-2.3 1.4-2.3H17a3 3 0 0 0 3-3.2C19.6 7.5 16.2 4 12 4z"]];
+const dock = $("#dock");
+dock.innerHTML = DOCK.map(([n, d], i) => `<button class="dk" style="--i:${i}" data-n="${n}"><span class="ic" style="position:relative"><svg viewBox="0 0 24 24"><path pathLength="1" d="${d}"/></svg></span><b>${n}</b></button>`).join("");
+function dk() {
+  const r = dock.getBoundingClientRect(), cx = r.left + r.width / 2; let best = null, bd = 9;
+  dock.querySelectorAll(".dk").forEach((el) => { const b = el.getBoundingClientRect(), d = Math.min(1.6, Math.abs(b.left + b.width / 2 - cx) / 88); el.style.setProperty("--d", d.toFixed(3)); if (d < bd) { bd = d; best = el; } });
+  dock.querySelectorAll(".dk").forEach((el) => el.classList.toggle("mid", el === best));
+}
+dock.addEventListener("scroll", dk, { passive: true });
+dock.addEventListener("click", (e) => { const el = e.target.closest(".dk"); if (!el) return; el.classList.remove("tap"); void el.offsetWidth; el.classList.add("tap"); el.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  if (el.dataset.n === "饮食计划") setTimeout(() => P.sheet("plans"), 260); if (el.dataset.n === "主题色") setTimeout(() => P.sheet("theme"), 260); });
+dk(); addEventListener("load", () => { dock.scrollLeft = 88; dk(); });
+
+// 日历（2026 年 11 月，1 号是周日）
+const pad = (n) => String(n).padStart(2, "0");
+$("#calwds").innerHTML = [..."一二三四五六日"].map((w) => `<span class="calwd">${w}</span>`).join("");
+let calSel = 14;
+function calDraw(dir = 1) {
+  const lead = 6, dim = 30, seq = "LLLH"; let h = `<i class="calsel k-L" id="calsel"><i></i></i>`;
+  for (let i = 0; i < lead + dim; i++) {
+    const r = Math.floor(i / 7), c = i % 7, d = i - lead + 1;
+    if (d < 1) { h += `<span class="calc empty"></span>`; continue; }
+    const k = d >= 13 ? seq[(d - 13) % 4] : null;
+    h += `<button class="calc${d === 14 ? " today" : ""}${d > 14 ? " fut" : ""}${k ? " k-" + k : ""}" data-d="${d}" style="--r:${r};--c:${c}" onclick="P.cal(${d})"><span class="dn num">${d}</span><span class="mk">${k ? '<i class="kb"></i>' : ""}${d >= 9 && d <= 13 ? '<i class="dot eat"></i>' : ""}${d === 9 || d === 13 ? '<i class="dot wt"></i>' : ""}</span></button>`;
+  }
+  const el = $("#calcells"); el.style.setProperty("--dir", dir); el.innerHTML = h; replay(el); P.cal(calSel, true);
+}
+
+const PLANS = [["稳稳来", "新手首选", "MMMMMMM", "#9cc0ff,#5a7cf6,#3b3fb8"], ["三低一高", "4 天一轮", "LLLHLLL", "#5ff0d0,#19b3d6,#2f6df6"], ["低低中低低高", "6 天一轮", "LLMLLHL", "#8af0c8,#3b8df7,#7a5cff"],
+  ["跟着训练走", "按星期排", "HMLHMML", "#ffc46b,#ff6a3d,#ff2d6f"], ["凯圣王碳循环", "网传版", "HMLHMML", "#ffe08a,#f5a623,#b8562b"], ["AI 定制计划", "说说你的情况", "MHLMHLL", "#b9a7ff,#ff7ab8,#ffb24d"]];
+const ACC = [["", "海", "#007aff"], ["berry", "莓", "#ff4d5e"], ["pine", "松", "#00a884"], ["iris", "藤", "#7a5cff"], ["persimmon", "柿", "#f5820a"]];
+let pick = 1, acc = 0;
+
+const P = window.P = {
+  face(x) {
+    const r = x === "r"; $("#hseg").style.setProperty("--at", r ? 1 : 0);
+    $("#hseg").querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-pressed", String(i === (r ? 1 : 0))));
+    replay($("#hseg .th i"));
+    const on = $(r ? "#face-r" : "#face-k"), off = $(r ? "#face-k" : "#face-r");
+    off.className = "face off"; on.className = "face on"; if (r) $("#wk").innerHTML = wkHTML();
+    $("#hero").classList.toggle("kd-L", r);
+  },
+  day(dir) {
+    const v = $("#view"); v.style.setProperty("--dir", dir); v.classList.remove("dayflip"); void v.offsetWidth; v.classList.add("dayflip");
+    const t = $("#dtitle"); t.textContent = dir > 0 ? "明天" : "昨天"; $("#dsub").textContent = dir > 0 ? "11月15日 周日" : "11月13日 周五"; t.style.setProperty("--dir", dir); replay(t); replay($("#dsub"));
+    document.querySelectorAll(".daypager .dots i").forEach((d, i) => d.classList.toggle("on", i === 1 + dir));
+  },
+  expand() {
+    const r = $("#hero").getBoundingClientRect(), p = $("#push");
+    p.style.setProperty("--it", r.top + "px"); p.style.setProperty("--il", r.left + "px"); p.style.setProperty("--ir", innerWidth - r.right + "px"); p.style.setProperty("--ib", Math.max(0, innerHeight - r.bottom) + "px");
+    void p.offsetWidth; $("#wk2").innerHTML = wkHTML(); root.classList.remove("popping"); root.classList.add("pushing", "exping");
+  },
+  pop() { root.classList.add("popping"); root.classList.remove("pushing", "exping"); setTimeout(() => root.classList.remove("popping"), 520); },
+  sheet(kind) {
+    $("#shttl").textContent = kind === "theme" ? "主题色" : "饮食计划";
+    $("#sb").innerHTML = kind === "theme"
+      ? `<div class="card tdots" id="tdots"><i class="tring" id="tring"></i>${ACC.map(([id, n, c], i) => `<button class="tdot" style="--i:${i};--c:${c}" aria-pressed="${i === acc}" aria-label="${n}" onclick="P.accent(${i})"><i></i></button>`).join("")}</div>
+         <div class="card tprev"><span class="sw"><svg viewBox="0 0 24 24"><path d="M5 19V13M10 19V8M15 19v-4M20 19V5"/></svg></span><span><b>主题色：<span class="tname" id="tname">${ACC[acc][1]}</span></b><br><span>按钮、图标、选中的东西都会换成这个颜色。</span></span></div>
+         <button class="btn primary block">就用这个</button>`
+      : `<div class="pgrid">${PLANS.map(([n, t, s, g], i) => { const c = g.split(","); return `<button class="pcard" style="--i:${i};--g1:${c[0]};--g2:${c[1]};--g3:${c[2]}" aria-pressed="${i === pick}" onclick="P.pick(${i})">
+          <span class="cv"><span class="mini">${[...s].map((k, j) => `<i class="${k === "H" ? "hi" : ""}" style="--h:${H[k]};--j:${j}"></i>`).join("")}</span><span class="ck"><svg viewBox="0 0 24 24"><path pathLength="1" d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></span>
+          <i class="ringo" style="bottom:auto;aspect-ratio:1.19"></i><b>${n}</b><small>${t}</small></button>`; }).join("")}</div>
+         <div class="cta"><button class="btn primary" id="cta">用这个计划 · <span class="tk" id="ctan">${PLANS[pick][0]}</span></button></div>`;
+    const s = $("#shade"); s.hidden = false; replay(s); root.classList.remove("sheet-closing"); root.classList.add("has-sheet");
+    if (kind === "theme") requestAnimationFrame(() => P.ring());
+  },
+  close() { root.classList.add("sheet-closing"); setTimeout(() => { root.classList.remove("has-sheet", "sheet-closing"); $("#shade").hidden = true; }, 300); },
+  pick(i) { pick = i; document.querySelectorAll(".pcard").forEach((el, j) => el.setAttribute("aria-pressed", String(j === i))); $("#ctan").textContent = PLANS[i][0]; replay($("#ctan")); const b = $("#cta"); b.classList.remove("bump"); void b.offsetWidth; b.classList.add("bump"); },
+  ring() { const d = document.querySelectorAll(".tdot")[acc]; if (d) $("#tring").style.setProperty("--rx0", d.offsetLeft - 2 + "px"); },
+  accent(i) {
+    const d = document.querySelectorAll(".tdot")[i], r = d.getBoundingClientRect();
+    root.style.setProperty("--tx", r.left + r.width / 2 + "px"); root.style.setProperty("--ty", r.top + r.height / 2 + "px");
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2; root.style.setProperty("--tr", Math.ceil(Math.hypot(Math.max(cx, innerWidth - cx), Math.max(cy, innerHeight - cy))) + "px");
+    const go = () => { acc = i; if (ACC[i][0]) root.dataset.accent = ACC[i][0]; else delete root.dataset.accent;
+      document.querySelectorAll(".tdot").forEach((el, j) => el.setAttribute("aria-pressed", String(j === i))); $("#tname").textContent = ACC[i][1]; replay($("#tname")); P.ring(); };
+    return document.startViewTransition ? document.startViewTransition(go) : go();
+  },
+  cal(d, quiet) {
+    calSel = d; const i = d + 5, r = Math.floor(i / 7), c = i % 7, s = $("#calsel");
+    s.style.setProperty("--r", r); s.style.setProperty("--c", c); if (!quiet) replay(s.firstElementChild);
+    const k = d >= 13 ? "LLLH"[(d - 13) % 4] : null; s.className = "calsel" + (k ? " k-" + k : "");
+    document.querySelectorAll("#calcells .calc").forEach((el) => el.classList.toggle("sel", +el.dataset.d === d));
+    const pct = d < 14 && d >= 9 ? 0.92 : d === 14 ? 0.38 : 0;
+    $("#calday").innerHTML = `<div class="cdh" style="--i:0"><b>11 月 ${d} 日 周${"日一二三四五六"[(d - 1) % 7]}</b>${k ? `<span class="kpill k-${k}">${k === "H" ? "高碳日" : "低碳日"}</span>` : ""}</div>
+      <div class="cdgrid" style="--i:1"><div class="cdring" style="--v:${pct}"><svg viewBox="0 0 64 64"><circle class="tr" cx="32" cy="32" r="27"/><circle class="fl" cx="32" cy="32" r="27" pathLength="1"/></svg><span><b class="num">${pct ? Math.round(pct * 100) : "–"}</b><small>${pct ? "%" : ""}</small></span></div>
+      <div class="cdnums"><div><span>${d > 14 ? "那天的目标" : "吃了 / 目标"}</span><b class="num">${d > 14 ? "" : Math.round(pct * 1866) + " / "}${k === "H" ? "3,174" : "1,866"} 千卡</b></div><div class="num small muted">蛋白 96　碳水 ${k === "H" ? 617 : 206}　脂肪 ${k === "H" ? 53 : 94} g</div></div></div>`;
+  },
+  month(dir) { $("#calttl").textContent = dir > 0 ? "2026 年 12 月" : "2026 年 10 月"; replay($("#calttl")); calDraw(dir); },
+  // 把所有动画停在第 t 毫秒（出分镜图用）
+  mark() { P._old = new Set(document.getAnimations()); },
+  freeze(t) { document.getAnimations().forEach((a) => { if (P._old && P._old.has(a)) return; try { a.pause(); a.currentTime = t; } catch (e) {} }); },
+};
+calDraw(1);
+</script>
+</body></html>
