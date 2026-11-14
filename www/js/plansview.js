@@ -35,12 +35,17 @@ function Glyph({ p }) {
 }
 
 export function PlanSheet({ onClose }) {
+  return html`<${Sheet} title="饮食计划" onClose=${onClose}><${PlanList} /><//>`;
+}
+
+// 计划清单本体：面板里和「计划」页都用它
+export function PlanList() {
   const S = app.S, today = dateStr();
   const cur = S.cycle ? planOf(S.cycle.id) : PLANS[0];
   const rows = rhythm(S, today, 14);
   const T = rows[0].T, info = dayInfo(S, today);
   const groups = ["基础", "碳循环", "网红方案", "AI"];
-  return html`<${Sheet} title="饮食计划" onClose=${onClose}>
+  return html`
     <section class="plancur" id="plan-cur">
       <div class="pch">
         <div><span class="eyebrow">正在用</span><b>${S.cycle && S.cycle.name ? S.cycle.name : cur.n}</b></div>
@@ -59,8 +64,7 @@ export function PlanSheet({ onClose }) {
         <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
       </button>`)}
     </div>`)}
-    <p class="tiny muted">计划只是把每天的热量和三大营养素分得不一样，蛋白每天都吃够。热量最低不会低于 ${S.profile.sex === "f" ? 1200 : 1500} 千卡。这些是一般的饮食参考，不是医疗建议；有慢性病或特殊情况请先问医生。</p>
-  <//>`;
+    <p class="tiny muted">计划只是把每天的热量和三大营养素分得不一样，蛋白每天都吃够。热量最低不会低于 ${S.profile.sex === "f" ? 1200 : 1500} 千卡。这些是一般的饮食参考，不是医疗建议；有慢性病或特殊情况请先问医生。</p>`;
 }
 
 // 每天高中低怎么填：按星期（训练日）

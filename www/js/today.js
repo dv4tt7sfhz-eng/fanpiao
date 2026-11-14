@@ -13,7 +13,7 @@ import { targetsFor, dayInfo, dayLabel, KIND } from "./plans.js";
 
 const WEEK = "日一二三四五六";
 
-function context() {
+export function context() {
   const S = app.S, d = dateStr(), day = dayOf(S, d);
   const foods = allFoods(S);
   const byId = Object.fromEntries(foods.map((f) => [f.id, f]));
@@ -35,7 +35,7 @@ export function replanLocal(variety) {
   commit(() => { day.plan = { meals: plan.meals }; day.tip = ""; day.src = "local"; day.T = { kcal: T.kcal, protein: T.protein }; day.pv = (day.pv || 0) + 1; });
 }
 
-function issues(tp, T, budget) {
+export function issues(tp, T, budget) {
   const out = [];
   const dk = tp.kcal - T.kcal;
   const tight = budget > 0 && tp.cost >= budget * 0.93;
@@ -50,7 +50,7 @@ function issues(tp, T, budget) {
 }
 
 // 连续几天有记录
-function streakOf(S, today) {
+export function streakOf(S, today) {
   const has = (d) => { const x = S.days[d]; return !!(x && x.plan && planItems(x.plan, true).length); };
   let n = 0, d = has(today) ? today : addDays(today, -1);
   while (has(d) && n < 999) { n++; d = addDays(d, -1); }
@@ -182,14 +182,14 @@ export function Today() {
   `;
 }
 
-const MEAL_ICON = {
+export const MEAL_ICON = {
   b: "M4 18h16M7 18a5 5 0 0 1 10 0M12 6v3M5.6 9.6l1.8 1.8M18.4 9.6l-1.8 1.8",
   l: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8",
   d: "M20 14.5A8 8 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z",
   s: "M12 21c-4.5 0-7-3.4-7-7.2C5 10.6 7.2 8.5 9.6 8.5c1 0 1.7.4 2.4.4s1.4-.4 2.4-.4c2.4 0 4.6 2.1 4.6 5.3 0 3.8-2.5 7.2-7 7.2zM12 8.5c0-2 1-3.6 3-4.5",
 };
 
-function Meal({ slot, items, mode, byId, idx }) {
+export function Meal({ slot, items, mode, byId, idx }) {
   const mt = sumItems(items, (id) => byId[id]);
   const m = MODE[mode] || MODE.cold;
   const done = items.length > 0 && items.every((it) => it.done);

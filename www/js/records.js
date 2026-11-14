@@ -17,7 +17,7 @@ const WD = "一二三四五六日";
 const pad = (n) => String(n).padStart(2, "0");
 
 // 减脂 / 增肌日历：每天的计划日型、有没有记饮食、有没有称体重；点一天看那天的详情，也能改那天是高碳还是低碳
-function Calendar() {
+export function Calendar() {
   const S = app.S, today = dateStr();
   const [ym, setYm] = useState(today.slice(0, 7));
   const [sel, setSel] = useState(today);

@@ -1,30 +1,31 @@
 // 入口：没建档先建档，建好以后是四个标签页
 import { html, render, useState, useEffect, useReducer, useRef, app, UI } from "./ui.js";
 import { Onboarding } from "./onboarding.js";
-import { Today, TargetSheet, ModeSheet, ItemSheet, PickSheet, AISheet } from "./today.js";
-import { FoodsView, FoodSheet, ShopSheet } from "./foodsview.js";
-import { Records } from "./records.js";
+import { TargetSheet, ModeSheet, ItemSheet, PickSheet, AISheet } from "./today.js";
+import { Today, PlanTab, FindView, MeView, DPage, LogSheet, FavSheet, CardsSheet, RankSheet, ThemeSheet } from "./home.js";
+import { FoodSheet, ShopSheet } from "./foodsview.js";
 import { SnapSheet } from "./snap.js";
 import { liquidify } from "./liquid.js";
 import { attachTabDrag } from "./tabdrag.js";
 import { NaFbSheet } from "./nafb.js";
-import { Me, ProfileSheet, AISetSheet, CloudSheet, DataSheet, AboutSheet } from "./me.js";
+import { ProfileSheet, AISetSheet, CloudSheet, DataSheet, AboutSheet } from "./me.js";
 import { detectPreview } from "./ai.js";
 import { AIImportSheet, fromLink } from "./aiimport.js";
 import { LibSheet } from "./lib.js";
 import { PlanSheet, PlanEditSheet } from "./plansview.js";
-import { haptic, fullFx, installRipple } from "./fx.js";
+import { haptic, fullFx, installRipple, calm } from "./fx.js";
 import { Splash, Calc, AIThinking, Wipe, Celebrate } from "./fullscreen.js";
 
 const TABS = [
-  { id: "today", n: "今天", d: "M3 17a9 9 0 0 1 18 0M12 4v2M4.6 7.6l1.4 1.4M19.4 7.6 18 9M2 20h20" },
-  { id: "foods", n: "食物", d: "M4 10h16l-1.6 9.2a1 1 0 0 1-1 .8H6.6a1 1 0 0 1-1-.8zM8 10l2.5-6M16 10l-2.5-6" },
-  { id: "records", n: "记录", d: "M5 20v-6M12 20V5M19 20v-9" },
+  { id: "today", n: "今日", d: "M5 6.5h14v13H5zM5 10.5h14M9 4v4M15 4v4M9 14.5h2" },
+  { id: "plan", n: "计划", d: "M5 19V13M10 19V8M15 19v-4M20 19V5" },
+  { id: "find", n: "发现", d: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM15.5 8.5l-2 5-5 2 2-5z" },
   { id: "me", n: "我的", d: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20.5a7.5 7.5 0 0 1 15 0" },
 ];
-const TITLE = { today: "今天", foods: "食物", records: "记录", me: "我的" };
+const TITLE = { today: "今日", plan: "计划", find: "发现", me: "我的" };
 const SHEETS = { target: TargetSheet, mode: ModeSheet, item: ItemSheet, pick: PickSheet, ai: AISheet, food: FoodSheet, shop: ShopSheet, snap: SnapSheet, nafb: NaFbSheet,
-  profile: ProfileSheet, aiset: AISetSheet, cloud: CloudSheet, data: DataSheet, about: AboutSheet, aiimport: AIImportSheet, lib: LibSheet, plan: PlanSheet, planedit: PlanEditSheet };
+  profile: ProfileSheet, aiset: AISetSheet, cloud: CloudSheet, data: DataSheet, about: AboutSheet, aiimport: AIImportSheet, lib: LibSheet, plan: PlanSheet, planedit: PlanEditSheet,
+  log: LogSheet, fav: FavSheet, cards: CardsSheet, rank: RankSheet, theme: ThemeSheet };
 const FSC = { splash: Splash, calc: Calc, ai: AIThinking, wipe: Wipe, cele: Celebrate };
 const root = document.documentElement;
 installRipple();
@@ -33,6 +34,8 @@ function App() {
   const [, force] = useReducer((x) => x + 1, 0);
   const [tab, setTab] = useState("today");
   const [sheet, setSheet] = useState(null);
+  const [pg, setPg] = useState(null);
+  const pgTimer = useRef(0);
   const [toast, setToast] = useState(null);
   // 底部标签栏的液态玻璃折射（只在 Chrome 内核上生效）
   const glassRef = useRef(null);
@@ -63,6 +66,7 @@ function App() {
     timer.current = setTimeout(() => { root.classList.remove("sheet-closing"); setSheet(null); }, 300);
   };
   const go = (t) => {
+    if (pg) closePage();
     if (t === tab) return;
     haptic(6); setFromFs(false);
     setDir(TABS.findIndex((x) => x.id === t) > TABS.findIndex((x) => x.id === tab) ? "r" : "l");
@@ -75,11 +79,18 @@ function App() {
   };
   // 先播完退场，再拿掉
   UI.fsOut = () => { setFs((f) => (f ? { ...f, closing: true } : f)); clearTimeout(fsTimer.current); fsTimer.current = setTimeout(() => setFs(null), 480); };
+  // 整页（饮食详情、计划详情）：从封面卡片的位置长出来，收起时缩回去
+  UI.page = (o) => { clearTimeout(pgTimer.current); haptic(6); setPg({ k: Date.now(), ...o }); };
+  const closePage = () => { if (!pg) return; setPg((p) => (p ? { ...p, closing: true } : p)); clearTimeout(pgTimer.current); pgTimer.current = setTimeout(() => setPg(null), calm() ? 0 : 520); };
+  UI.closePage = closePage;
   UI.open = openSheet; UI.close = closeSheet; UI.go = go; goRef.current = go;
   UI.toast = (t) => { setToast({ t, k: Date.now() }); clearTimeout(UI._t); UI._t = setTimeout(() => setToast(null), 2600); };
-  UI.back = () => { if (fs) { if (fs.t === "cele") setFs(null); return true; } if (sheet) { closeSheet(); return true; } if (tab !== "today") { setTab("today"); return true; } return false; };
+  UI.back = () => { if (fs) { if (fs.t === "cele") setFs(null); return true; } if (sheet) { closeSheet(); return true; } if (pg) { closePage(); return true; } if (tab !== "today") { setTab("today"); return true; } return false; };
 
   useEffect(() => { root.classList.toggle("has-sheet", !!sheet); }, [!!sheet]);
+  useEffect(() => { root.classList.toggle("has-page", !!(pg && !pg.closing)); }, [pg]);
+  // 只有深色；主题色跟着设置走
+  useEffect(() => { root.dataset.theme = "dark"; if (app.S.prefs.accent) root.dataset.accent = app.S.prefs.accent; else delete root.dataset.accent; });
   useEffect(() => { detectPreview().then((ok) => ok && force()); }, []);
   // 过了半夜自动换到新的一天
   useEffect(() => { const on = () => { if (!document.hidden) force(); }; document.addEventListener("visibilitychange", on); return () => document.removeEventListener("visibilitychange", on); }, []);
@@ -100,7 +111,7 @@ function App() {
   // 还没建档时也能打开「让 AI 帮你填」
   if (!app.S.profile) return html`<div class="page"><div class="view" key="ob"><${Onboarding} /></div></div>${sheetNode}${toastNode}${fsNode}`;
   if (!ready) return html`<div class="page"></div>${fsNode}`;
-  const View = { today: Today, foods: FoodsView, records: Records, me: Me }[tab];
+  const View = { today: Today, plan: PlanTab, find: FindView, me: MeView }[tab];
   const idx = TABS.findIndex((t) => t.id === tab);
   return html`
     <div class="navglass" aria-hidden="true"><b>${TITLE[tab]}</b></div>
@@ -112,6 +123,7 @@ function App() {
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d=${t.d} /></svg><span>${t.n}</span></button>`)}
       <i class="lgrim" aria-hidden="true"></i>
     </div></nav>
+    ${pg ? html`<${DPage} key=${pg.k} pg=${pg} onClose=${closePage} />` : null}
     ${sheetNode}
     ${toastNode}
     ${fsNode}`;
