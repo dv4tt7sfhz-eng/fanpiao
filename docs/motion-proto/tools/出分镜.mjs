@@ -4,7 +4,7 @@ const { chromium, devices } = createRequire(import.meta.url)("playwright");
 const OUT = "/home/claude/fanpiao/docs/motion-proto/shots/";
 const only = process.argv[2];
 const b = await chromium.launch();
-const ctx = await b.newContext({ ...devices["iPhone 13"] });
+const ctx = await b.newContext({ ...devices["iPhone 13"], colorScheme: "dark" });
 const p = await ctx.newPage();
 const errs = []; p.on("pageerror", (e) => errs.push(e.message)); p.on("console", (m) => m.type() === "error" && errs.push(m.text()));
 const open = async () => { await p.goto("http://127.0.0.1:8767/docs/motion-proto/index.html"); await p.waitForTimeout(150); };

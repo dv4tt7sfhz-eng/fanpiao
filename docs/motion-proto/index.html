@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8">
+<html lang="zh-CN" data-theme="dark"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>饭票 1.8.0 动效样例</title>
 <link rel="stylesheet" href="../../www/styles.css">
 <link rel="stylesheet" href="motion.css">
+<link rel="stylesheet" href="dark.css">
 <style>
 /* 只是样例页自己用的摆放，不用搬进 App */
 .hero.cov .ctop{gap:10px}
@@ -101,7 +102,7 @@
 <!-- 计划详情页（从封面展开） -->
 <div class="push exp" id="push">
   <button class="back gl glass" onclick="P.pop()" aria-label="返回"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-  <div class="pcover" style="--g1:#5ff0d0;--g2:#19b3d6;--g3:#2f6df6;--g4:#1c2a7a">
+  <div class="pcover" >
     <div class="mesh"><i class="m1"></i><i class="m2"></i><i class="m3"></i></div>
     <div class="wk" id="wk2"></div>
     <span class="ptag glass">碳循环 · 4 天一轮</span>
@@ -166,9 +167,9 @@ function calDraw(dir = 1) {
   const el = $("#calcells"); el.style.setProperty("--dir", dir); el.innerHTML = h; replay(el); P.cal(calSel, true);
 }
 
-const PLANS = [["稳稳来", "新手首选", "MMMMMMM", "#9cc0ff,#5a7cf6,#3b3fb8"], ["三低一高", "4 天一轮", "LLLHLLL", "#5ff0d0,#19b3d6,#2f6df6"], ["低低中低低高", "6 天一轮", "LLMLLHL", "#8af0c8,#3b8df7,#7a5cff"],
-  ["跟着训练走", "按星期排", "HMLHMML", "#ffc46b,#ff6a3d,#ff2d6f"], ["凯圣王碳循环", "网传版", "HMLHMML", "#ffe08a,#f5a623,#b8562b"], ["AI 定制计划", "说说你的情况", "MHLMHLL", "#b9a7ff,#ff7ab8,#ffb24d"]];
-const ACC = [["", "海", "#007aff"], ["berry", "莓", "#ff4d5e"], ["pine", "松", "#00a884"], ["iris", "藤", "#7a5cff"], ["persimmon", "柿", "#f5820a"]];
+const PLANS = [["稳稳来", "新手首选", "MMMMMMM", "#6f8cff,#3a2fb8,#2a2a70"], ["三低一高", "4 天一轮", "LLLHLLL", "#2ee6c4,#1673d9,#0b3a5c"], ["低低中低低高", "6 天一轮", "LLMLLHL", "#5ad8ff,#6a3cff,#24124f"],
+  ["跟着训练走", "按星期排", "HMLHMML", "#ff6a4a,#b0124a,#3a0a1c"], ["凯圣王碳循环", "网传版", "HMLHMML", "#ffc04a,#c2501c,#3a1a08"], ["AI 定制计划", "说说你的情况", "MHLMHLL", "#c58bff,#ff4f9a,#3a1040"]];
+const ACC = [["", "海", "#4ea1ff"], ["berry", "莓", "#ff5c7a"], ["pine", "松", "#2fd6a0"], ["iris", "藤", "#9b85ff"], ["persimmon", "柿", "#ff9a3c"]];
 let pick = 1, acc = 0;
 
 const P = window.P = {
