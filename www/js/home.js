@@ -157,30 +157,56 @@ function TodayMeals({ S, day, byId, T }) {
   </section>`;
 }
 
-// 封面卡：「计划 / 饮食」两面都在，换面时交叉淡化；点卡片长成整页
+// 封面卡：「计划 / 饮食」两面。--pv 是进度（1 = 计划面，0 = 饮食面），手指拖的时候直接改它，松手后动画到终点。
+// 计划面：标题跟手、按钮半速、碗往下沉；饮食面从右边滑进来。
 function Cover({ S, d, T, info, te, plan }) {
   const [face, setFace] = useState(() => app.coverFace || "diet");
   const [flip, setFlip] = useState(0);
-  const box = useRef(null), sw = useRef(null);
+  const box = useRef(null), drag = useRef(null), justDragged = useRef(false);
+  const isPlan = face === "plan";
   const set = (f) => { if (f === face) return; haptic(5); app.coverFace = f; setFace(f); setFlip((x) => x + 1); };
+  const vars = (v) => { const el = box.current; if (!el) return; const c = Math.max(0, Math.min(1, v)); el.style.setProperty("--pv", v.toFixed(4)); el.style.setProperty("--ths", (1 + 2.2 * c * (1 - c)).toFixed(4)); };
   const meals = plan ? SLOTS.filter((s) => plan.meals[s].some((it) => it.done)).length : 0;
   const pct = T.kcal ? Math.min(1, te.kcal / T.kcal) : 0;
   const open = (e) => {
     if (e.target.closest("button")) return;
-    if (sw.current && sw.current.moved) return;
+    if (justDragged.current) return;
     UI.page({ t: face, from: box.current.getBoundingClientRect() });
   };
-  const down = (e) => { sw.current = { x: e.clientX, y: e.clientY, moved: false }; };
-  const move = (e) => { const s = sw.current; if (s && Math.abs(e.clientX - s.x) > 12) s.moved = true; };
-  const up = (e) => { const s = sw.current; if (!s) return; const dx = e.clientX - s.x; if (Math.abs(dx) > 46 && Math.abs(dx) > Math.abs(e.clientY - s.y)) set(dx > 0 ? "plan" : "diet"); setTimeout(() => { sw.current = null; }, 0); };
+  const down = (e) => { drag.current = { x: e.clientX, y: e.clientY, t: e.timeStamp, on: false, id: e.pointerId, v: isPlan ? 1 : 0, hx: [[e.clientX, e.timeStamp]] }; };
+  const move = (e) => {
+    const g = drag.current; if (!g) return;
+    const dx = e.clientX - g.x, dy = e.clientY - g.y;
+    if (!g.on) {
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy) * 1.2) { g.on = true; box.current.classList.add("dragging"); try { box.current.setPointerCapture(g.id); } catch (er) {} }
+      else if (Math.abs(dy) > 14) drag.current = null;
+      return;
+    }
+    const base = isPlan ? 1 : 0;
+    let v = base + dx / (box.current.clientWidth * 0.78);
+    if (v < 0) v *= 0.22; else if (v > 1) v = 1 + (v - 1) * 0.22;
+    g.v = v; g.hx.push([e.clientX, e.timeStamp]); if (g.hx.length > 5) g.hx.shift();
+    vars(v);
+  };
+  const up = () => {
+    const g = drag.current; drag.current = null;
+    if (!g || !g.on) return;
+    justDragged.current = true; setTimeout(() => { justDragged.current = false; }, 60);
+    const base = isPlan ? 1 : 0, [a, b2] = [g.hx[0], g.hx[g.hx.length - 1]];
+    const vel = b2[1] > a[1] ? (b2[0] - a[0]) / (b2[1] - a[1]) : 0;
+    let target = base;
+    if (Math.abs(g.v - base) > 0.3 || Math.abs(vel) > 0.45) target = (g.v - base > 0 || vel > 0.45) ? 1 : 0;
+    box.current.classList.remove("dragging");
+    requestAnimationFrame(() => vars(target));
+    if (target !== base) set(target ? "plan" : "diet"); else haptic(3);
+  };
   const pname = S.cycle && S.cycle.name ? S.cycle.name : info.plan.n;
   const lab = dayLabel(S, d);
-  const isPlan = face === "plan";
-  return html`<section class=${"cover " + (isPlan ? "f-plan" : "f-diet")} ref=${box} id="cover" onClick=${open} onPointerDown=${down} onPointerMove=${move} onPointerUp=${up} onPointerCancel=${() => { sw.current = null; }} aria-label="今天">
-    <div class="cv-clip" aria-hidden="true"><i class="cv-red"></i><i class="cv-dark"></i><i class="cv-glow" key=${"g" + flip}></i></div>
+  return html`<section class=${"cover " + (isPlan ? "f-plan" : "f-diet")} ref=${box} id="cover" style=${`--pv:${isPlan ? 1 : 0};--ths:1`} onClick=${open} onPointerDown=${down} onPointerMove=${move} onPointerUp=${up} onPointerCancel=${up} aria-label="今天">
+    <div class="cv-clip" aria-hidden="true"><i class="cv-red"></i><i class="cv-dark"></i><i class="cv-glow"></i></div>
     <div class="cv-art" aria-hidden="true"><${HeroBowl} /></div>
     <div class="cv-top">
-      <div class="fsw" role="tablist" style=${`--at:${isPlan ? 0 : 1}`}>
+      <div class="fsw" role="tablist">
         <i class="th" aria-hidden="true"><i key=${flip}></i></i>
         <button role="tab" id="face-plan" aria-selected=${String(isPlan)} onClick=${() => set("plan")}>计划</button>
         <button role="tab" id="face-diet" aria-selected=${String(!isPlan)} onClick=${() => set("diet")}>饮食</button>

@@ -2279,3 +2279,33 @@ button.mt:active{transform:scale(.95)}
 .lgt{flex:1;min-width:0;display:flex;flex-direction:column}
 .lgt b{font-size:15px}.lgt span{font-size:12px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lgrow>b{font-size:17px}.lgrow>b small{font-size:11px;color:var(--ink3)}
+
+/* ---------- 2.0.1 封面跟手滑：所有东西都跟着 --pv 走（1 = 计划面，0 = 饮食面） ---------- */
+@property --pv{syntax:"<number>";inherits:true;initial-value:0}
+@property --ths{syntax:"<number>";inherits:true;initial-value:1}
+.cover{transition:transform .45s var(--spring),--pv .56s cubic-bezier(.22,.9,.28,1),--ths .5s cubic-bezier(.3,1.25,.4,1)}
+.cover.dragging{transition:transform .45s var(--spring)}
+.cover.dragging:active{transform:none}
+.cover .cv-red{opacity:var(--pv);transition:none}
+.cover .cv-dark{opacity:calc(1 - var(--pv));transition:none}
+.cover .cv-glow{opacity:calc((1 - var(--pv)) * .95);transform:translateY(calc(var(--pv) * 30%)) scaleY(calc(1 - var(--pv) * .4));transition:none;animation:none}
+.cover .face.on,.cover .face.off{opacity:1;filter:none;transition:none}
+.cover .face.on>*,.cover .face.off>*{animation:none!important}
+.cover .fp .cv-title{transform:translateX(calc((var(--pv) - 1) * 300px));opacity:calc(var(--pv) * 1.3 - .15);filter:blur(calc((1 - var(--pv)) * 3px))}
+.cover .fp .cv-l1,.cover .fp .cv-l2{transform:translateX(calc((var(--pv) - 1) * 250px));opacity:calc(var(--pv) * 1.6 - .5)}
+.cover .fp .cv-dash{transform:translateX(calc((var(--pv) - 1) * 210px));opacity:calc(var(--pv) * 1.6 - .5)}
+/* 「安排计划」：只走手指一半的路，从左边滑回右下角 */
+.cover .fp .cv-cta{transform:translateX(calc((var(--pv) - 1) * 140px));opacity:calc(var(--pv) * 1.5 - .35);transition:none}
+.cover .fp .cv-cta:active{transform:scale(.94)}
+/* 碗：离开时往左下沉进卡片底边，回来时从底下升起，筷子伸出卡片上沿 */
+.cover .cv-art{transition:none;filter:none;opacity:calc(var(--pv) * 1.7 - .3);
+  transform:translate(calc((var(--pv) - 1) * 48px),calc((1 - var(--pv)) * 130px)) scale(calc(.9 + var(--pv) * .1));transform-origin:70% 100%}
+/* 饮食面：从右边滑进来 */
+.cover .fd>*{transform:translateX(calc(var(--pv) * 170px));opacity:calc(1 - var(--pv) * 1.7)}
+.cover .fd .cv-arc{transform:translateY(calc(var(--pv) * 24px));opacity:calc(1 - var(--pv) * 1.5)}
+.cover .cv-ic.fork{opacity:calc(1 - var(--pv) * 2.2);transition:width .3s,margin .3s}
+/* 开关的红块：跟着进度走，走到一半拉得最长 */
+.cover .fsw .th{transform:translateX(calc((1 - var(--pv)) * 100%)) scaleX(var(--ths));transition:none}
+.cover .fsw button[aria-selected="true"]{color:#fff}
+@media (prefers-reduced-motion:reduce){.cover{transition:--pv .15s linear}}
+.cover,.cover *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-user-drag:none}
