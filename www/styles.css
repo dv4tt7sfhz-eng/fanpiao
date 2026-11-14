@@ -305,7 +305,7 @@ pre.code{background:var(--fill);border-radius:12px;padding:12px;font-size:12px;o
   padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -10px 50px rgba(0,0,0,.25);animation:sheetup .46s var(--smooth) both;transition:transform .4s var(--smooth);will-change:transform}
 @keyframes sheetup{from{transform:translateY(100%)}to{transform:none}}
 .sheet-closing .shade{opacity:0;animation:none;transition:opacity .3s}
-.sheet-closing .sheet{transform:translateY(105%)!important;transition:transform .3s cubic-bezier(.4,0,1,1)}
+.sheet-closing .sheet:not(.grown){transform:translateY(105%)!important;transition:transform .3s cubic-bezier(.4,0,1,1)}
 .sheet .card,.sheet .note,.sheet .btn{box-shadow:none}
 .grab{padding:8px 0 2px;display:grid;place-items:center;touch-action:none;cursor:grab}
 .grab i{width:38px;height:5px;border-radius:3px;background:var(--fill2)}
@@ -2188,7 +2188,7 @@ button.mt:active{transform:scale(.95)}
 @keyframes camup{from{transform:translateY(var(--from));border-radius:28px 28px 0 0;background:#171314}to{transform:none;border-radius:0}}
 .campage.back{animation:camback .28s cubic-bezier(.4,0,.2,1) forwards}
 @keyframes camback{from{transform:none}to{transform:translateY(var(--from));border-radius:28px 28px 0 0;opacity:.85}}
-.sheet-closing .campage{animation:camdown .3s cubic-bezier(.4,0,1,1) forwards}
+.sheet-closing .campage:not(.grown){animation:camdown .3s cubic-bezier(.4,0,1,1) forwards}
 @keyframes camdown{to{transform:translateY(100%)}}
 .cam-in{position:absolute;inset:0;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 8px) 16px calc(env(safe-area-inset-bottom,0px) + 18px);animation:camfade .5s ease .08s backwards}
 @keyframes camfade{from{opacity:0;filter:blur(14px)}}
@@ -2226,7 +2226,7 @@ button.mt:active{transform:scale(.95)}
 .smartpage{position:fixed;inset:0;z-index:45;display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 8px) 0 calc(env(safe-area-inset-bottom,0px) + 22px);overflow:hidden;
   background:radial-gradient(90% 40% at 50% 62%,rgba(255,190,120,.08),transparent 70%),#0b0a0b;animation:spup .52s cubic-bezier(.3,.9,.25,1) both}
 @keyframes spup{from{transform:translateY(100%)}}
-.sheet-closing .smartpage{animation:spdown .3s cubic-bezier(.4,0,1,1) forwards}
+.sheet-closing .smartpage:not(.grown){animation:spdown .3s cubic-bezier(.4,0,1,1) forwards}
 @keyframes spdown{from{transform:none}to{transform:translateY(100%)}}
 .sp-h{width:100%;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding:0 16px}
 .sp-h b{text-align:center;font-size:16px}
@@ -2344,3 +2344,456 @@ button.mt:active{transform:scale(.95)}
 @media (prefers-reduced-motion:reduce){.fpill,.fpill::before,.fp-tx,.fp-go,.fab .lb-ic{transition-duration:.01s!important;transition-delay:0s!important}}
 /* 封面滑到「计划」时，饮食那面的字被推到屏幕外右边；以前会把整页撑宽，能左右晃。这里把横向多出来的剪掉 */
 .page{overflow-x:clip}
+
+/* ===== 2.1.0 过场：大框从点的地方长出来，小框飞到新位置（照录屏量的时间） ===== */
+/* 整页：框 0.46s 长满（一下子就长了一大半，后面慢慢贴边） */
+.dp-box{--bx:cubic-bezier(.1,.8,.05,1);transition:top .46s var(--bx),left .46s var(--bx),right .46s var(--bx),bottom .46s var(--bx),border-radius .46s var(--bx)}
+.dp-red{transition:opacity .3s ease}
+/* 整页里的内容一开始就按整屏排好，不跟着框变形——框只是一扇越开越大的窗 */
+.dp-scroll{inset:auto;top:calc(var(--t) * -1);left:calc(var(--l) * -1);width:var(--W);height:var(--H);transition:top .46s var(--bx),left .46s var(--bx),opacity .2s}
+.dpage.on .dp-scroll{top:0;left:0}
+.dpage.out .dp-scroll{top:calc(var(--t) * -1);left:calc(var(--l) * -1);transition:top .5s var(--dx),left .5s var(--dx),opacity .3s ease .04s}
+.dp-box>.logbar{left:calc(max(16px,env(safe-area-inset-left,0px)) - var(--l));right:auto;width:calc(var(--W) - max(16px,env(safe-area-inset-left,0px)) - max(16px,env(safe-area-inset-right,0px)));
+  bottom:calc(env(safe-area-inset-bottom,0px) + 18px - var(--b));transition:left .46s var(--bx),bottom .46s var(--bx)}
+.dpage.on .dp-box>.logbar{left:max(16px,env(safe-area-inset-left,0px));bottom:calc(env(safe-area-inset-bottom,0px) + 18px)}
+.dpage.out .dp-box>.logbar{left:calc(max(16px,env(safe-area-inset-left,0px)) - var(--l));bottom:calc(env(safe-area-inset-bottom,0px) + 18px - var(--b));transition:left .5s var(--dx),bottom .5s var(--dx),opacity .3s}
+/* 按钮从封面飞下来的时候，底栏自己就不再从下面冒出来了 */
+.dpage.on .logbar:has(.flying){animation:none}
+/* 收起时：飞回去的小框不淡，别的由脚本一件件淡掉 */
+.dpage.out[data-flew] .dp-scroll,.dpage.out[data-flew] .logbar{opacity:1}
+.flying{will-change:transform;position:relative;z-index:30}
+/* 面板 / 拍摄页 / 智能食谱页：从按钮长出来时不用原来的往上滑 */
+.sheet.grown,.campage.grown,.smartpage.grown{animation:none!important}
+.sheet.grown{position:relative}
+.fly-tint{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:20}
+/* 遮罩：以前是整层（连面板）一起从透明淡进来、关的时候整层一下子没了，所以面板从按钮长出来的前一半几乎看不见、收起的动画也看不见。
+   现在遮罩本身一直不透明，只让它的暗色和毛玻璃淡进淡出 */
+.shade{opacity:1;animation:shin .35s var(--out) both}
+@keyframes shin{from{background-color:rgba(0,0,0,0);-webkit-backdrop-filter:blur(0px);backdrop-filter:blur(0px)}}
+.sheet-closing .shade{opacity:1;animation:shout .3s ease forwards;transition:none}
+@keyframes shout{to{background-color:rgba(0,0,0,0);-webkit-backdrop-filter:blur(0px);backdrop-filter:blur(0px)}}
+.sheet.growing .sb,.sheet.growing .favwrap,.sheet.growing .favlist{overflow:visible}
+.flyhost{animation:none!important}
+
+/* ===================================================================================
+   2.1.0 点击小动画 c1–c150
+   规则：点下去的瞬间（:active，按住时就看得见）+ 松手后（[data-tk]，脚本给被点的东西打上，1 秒后拿掉）
+   会弹出面板的按钮，松手后马上被面板盖住，所以它们的小动作放在「按住」和「面板缩回来时接住」（[data-back]）
+   =================================================================================== */
+@keyframes t-pop{0%{transform:scale(1)}35%{transform:scale(1.22)}65%{transform:scale(.93)}100%{transform:scale(1)}}
+@keyframes t-hop{0%,100%{transform:translateY(0)}35%{transform:translateY(-5px)}65%{transform:translateY(1px)}}
+@keyframes t-spin{to{transform:rotate(360deg)}}
+@keyframes t-spinr{to{transform:rotate(-360deg)}}
+@keyframes t-q{0%{transform:rotate(0)}100%{transform:rotate(90deg)}}
+@keyframes t-wig{0%,100%{transform:rotate(0)}20%{transform:rotate(-14deg)}45%{transform:rotate(11deg)}70%{transform:rotate(-6deg)}}
+@keyframes t-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+@keyframes t-nr{0%,100%{transform:translateX(0)}40%{transform:translateX(6px)}70%{transform:translateX(-1px)}}
+@keyframes t-nl{0%,100%{transform:translateX(0)}40%{transform:translateX(-6px)}70%{transform:translateX(1px)}}
+@keyframes t-nd{0%,100%{transform:translateY(0)}40%{transform:translateY(5px)}70%{transform:translateY(-1px)}}
+@keyframes t-nu{0%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}70%{transform:translateY(1px)}}
+@keyframes t-flipx{from{transform:perspective(200px) rotateX(0)}to{transform:perspective(200px) rotateX(360deg)}}
+@keyframes t-flipy{from{transform:perspective(200px) rotateY(0)}to{transform:perspective(200px) rotateY(360deg)}}
+@keyframes t-squash{0%,100%{transform:scale(1,1)}30%{transform:scale(1.12,.86)}60%{transform:scale(.95,1.06)}}
+@keyframes t-jelly{0%,100%{transform:scale(1)}25%{transform:scale(.92,1.08)}50%{transform:scale(1.06,.94)}75%{transform:scale(.98,1.02)}}
+@keyframes t-beat{0%,100%{transform:scale(1)}15%{transform:scale(1.25)}30%{transform:scale(1)}45%{transform:scale(1.15)}60%{transform:scale(1)}}
+@keyframes t-swing{0%,100%{transform:rotate(0)}25%{transform:rotate(18deg)}55%{transform:rotate(-12deg)}80%{transform:rotate(5deg)}}
+@keyframes t-spark{0%{transform:scale(1) rotate(0);filter:none}40%{transform:scale(1.3) rotate(40deg);filter:drop-shadow(0 0 6px var(--tint-glow)) brightness(1.5)}100%{transform:scale(1) rotate(72deg);filter:none}}
+@keyframes t-draw{from{stroke-dasharray:1;stroke-dashoffset:1}to{stroke-dasharray:1;stroke-dashoffset:0}}
+@keyframes t-glow{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--tint) 55%,transparent)}100%{box-shadow:0 0 0 12px transparent}}
+@keyframes t-flash{0%{box-shadow:inset 0 0 0 60px rgba(255,255,255,.2)}100%{box-shadow:inset 0 0 0 60px rgba(255,255,255,0)}}
+@keyframes t-greenflash{0%{box-shadow:inset 0 0 0 80px color-mix(in srgb,var(--green,#34c759) 26%,transparent)}100%{box-shadow:inset 0 0 0 80px transparent}}
+@keyframes t-rise{from{transform:translateY(7px);opacity:.2}to{transform:none;opacity:1}}
+@keyframes t-tick{0%{transform:translateY(0)}30%{transform:translateY(-40%);opacity:.3}31%{transform:translateY(40%)}100%{transform:none;opacity:1}}
+@keyframes t-stretch{0%,100%{transform:scaleX(1)}40%{transform:scaleX(1.5)}70%{transform:scaleX(.9)}}
+@keyframes t-unpop{0%,100%{transform:scale(1)}40%{transform:scale(.7)}}
+@keyframes t-land{0%{transform:scale(1)}30%{transform:scale(.9,.94)}65%{transform:scale(1.04)}100%{transform:scale(1)}}
+@keyframes t-strike{from{background-size:0 1.5px}to{background-size:100% 1.5px}}
+@keyframes t-tapring{from{transform:scale(.25);opacity:.95}to{transform:scale(1.6);opacity:0}}
+@keyframes t-vf{0%{box-shadow:inset 0 0 0 999px rgba(255,255,255,.75)}100%{box-shadow:inset 0 0 0 999px rgba(255,255,255,0)}}
+@keyframes t-corner{0%,100%{scale:1}40%{scale:.78}}
+@keyframes t-shut{0%,100%{transform:scale(1)}40%{transform:scale(.72)}}
+@keyframes t-bars{0%,100%{transform:scaleY(1)}40%{transform:scaleY(.55)}75%{transform:scaleY(1.12)}}
+@keyframes t-sheen{from{background-position:130% 0}to{background-position:-30% 0}}
+@keyframes t-hue{to{filter:hue-rotate(360deg)}}
+@keyframes t-jiggle{from{transform:rotate(-1.2deg)}to{transform:rotate(1.2deg)}}
+@keyframes t-sink{0%,100%{transform:translateY(0)}45%{transform:translateY(3px) scale(.97)}}
+@keyframes t-sunrise{0%,100%{transform:translateY(0)}45%{transform:translateY(-4px)}}
+
+/* —— 通用 —— */
+/* c1 原来没有按下效果的 9 种（换一份 / 换计划胶囊、我的页方块、数据卡、食物库一行、「记到早餐」、「历史」、「编辑」、计划饮食开关、火苗）：
+   按住缩一点，松手带一点回弹——脚本用单独的 scale 属性做，不跟它们原来的动画打架 */
+/* c2 手指点的地方冒一圈光（最上层） */
+.tapring{position:fixed;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;pointer-events:none;z-index:95;border:1.5px solid color-mix(in srgb,var(--tint) 65%,#fff);box-shadow:0 0 14px -2px var(--tint-glow);animation:t-tapring .5s cubic-bezier(.2,.7,.3,1) forwards}
+/* c3 主按钮：里面闪一下白光 */
+.btn.primary[data-tk]{animation:t-flash .5s ease-out}
+/* c4 危险按钮（删除、清空）：左右抖一下 */
+.btn.danger[data-tk]{animation:t-shake .45s ease-out}
+/* c5 小按钮：跳一下 */
+.btn.sm:not(.danger)[data-tk]{animation:t-hop .45s var(--spring)}
+/* c6 整行宽按钮：外面一圈光散开 */
+.btn.block:not(.primary):not(.danger)[data-tk]{animation:t-glow .6s ease-out}
+/* c7 普通按钮：果冻一样晃一下 */
+.btn.grow:not(.primary):not(.danger)[data-tk]{animation:t-jelly .5s ease-out}
+/* c8 带图标的按钮：图标弹一下 */
+.btn.icon[data-tk] svg,.btn[data-tk]>svg{animation:t-pop .45s var(--spring)}
+/* c9 面板右上角 ×：转 90° */
+.sh .x svg{transition:transform .3s var(--spring)}
+.sh .x:active svg{transform:rotate(90deg) scale(.85)}
+/* c10 面板顶上的小横条：按住变宽变亮 */
+.grab i{transition:transform .25s var(--spring),background-color .25s}
+.grab:active i{transform:scaleX(1.5);background-color:rgba(255,255,255,.55)}
+/* c11 整页左上「收起」：箭头往下坠一下 */
+#page-close svg{transition:transform .3s var(--spring)}
+#page-close:active svg{transform:translateY(4px)}
+/* c12 返回钮：箭头往左冲 */
+#cam-back:active svg,#smart-back:active svg{transform:translateX(-4px)}
+#cam-back svg,#smart-back svg{transition:transform .25s var(--spring)}
+/* c13 分段选择：选中的底块拉长一下再落位 */
+.seg[data-tkp] .thumb{animation:t-squash .45s ease-out}
+/* c14 分段选择：被点的字弹一下 */
+.seg button[data-tk]{animation:t-pop .4s var(--spring)}
+/* c15 开关：小圆钮压扁一下 */
+.switch[data-tk] input::after{animation:t-squash .4s ease-out}
+/* c16 圆形勾选（食物列表、拍照识别结果）：弹一下 */
+.tog[data-tk]{animation:t-pop .45s var(--spring)}
+/* c17 标签 chip：鼓一下 */
+.chip[data-tk]{animation:t-pop .4s var(--spring)}
+/* c18 选项卡（单选）：外圈光 */
+.opt[data-tk]{animation:t-glow .55s ease-out}
+/* c19 「外食 / 自己做」小下拉：箭头往下点一下 */
+.modebtn svg{transition:transform .25s var(--spring)}
+.modebtn:active svg{transform:translateY(3px)}
+/* c20 卡片分类标签：跳一下 */
+.utabs button[data-tk]{animation:t-hop .4s var(--spring)}
+/* c21 食物页「我的 / 食物库」下划线拉长一下 */
+.utabs.line[data-tkp]::after{animation:t-stretch .45s ease-out}
+/* c22 份量「＋」：转 90° */
+#qty-plus[data-tk]{animation:t-q .3s var(--spring)}
+/* c23 份量「−」：横着压扁 */
+#qty-minus[data-tk]{animation:t-squash .35s ease-out}
+/* c24 份量数字：往上翻一格 */
+.stepper[data-tkp] .q{animation:t-tick .35s ease-out}
+
+/* —— 今天页顶上 —— */
+/* c25 连续记录的火苗：往上窜 */
+#streak svg{transition:scale .3s var(--spring)}
+#streak:active svg{scale:1.15 1.3}
+/* c26 火苗旁的天数：跳一下 */
+#streak:active b{transform:translateY(-3px);transition:transform .2s}
+/* c27 ◂ 往左冲 */
+.dtri.l:active svg{transform:translateX(-4px)}
+/* c28 ▸ 往右冲 */
+.dtri.r:active svg{transform:translateX(4px)}
+.dtri svg{transition:transform .25s var(--spring)}
+/* c29 封面「计划 / 饮食」：字压一下再弹 */
+.fsw button[data-tk]{animation:t-squash .4s ease-out}
+/* c30 封面开关的红块：亮一下 */
+.fsw[data-tkp] .th>i{animation:t-flash .5s ease-out}
+/* c31 封面叉子钮：按住往左歪 */
+#cover-smart svg,#goal-chip svg{transition:transform .3s var(--spring)}
+#cover-smart:active svg{transform:rotate(-20deg)}
+/* c32 封面铅笔钮：按住像在写字 */
+#goal-chip:active svg{transform:rotate(-24deg) translate(-1px,2px)}
+/* c33 封面「安排计划」：箭头圆往右顶 */
+#cover-cta i{transition:transform .3s var(--spring)}
+#cover-cta:active i{transform:translateX(4px) scale(.94)}
+/* c34 封面整张卡：按住往下压一点 */
+.cover:active:not(.dragging){transform:scale(.985)}
+
+/* —— 快捷栏：7 个图标各有各的动作（按住时） —— */
+.dock2 .dk svg{transition:transform .35s var(--spring),stroke .4s}
+/* c35 日历：纸往后翻 */
+#dock-0:active svg{transform:perspective(120px) rotateX(38deg)}
+/* c36 食物库：像书一样摊开 */
+#dock-1:active svg{transform:scaleX(1.25)}
+/* c37 饮食计划：徽章转一点 */
+#dock-2:active svg{transform:rotate(35deg)}
+/* c38 打卡等级：奖杯往上举 */
+#dock-3:active svg{transform:translateY(-4px) scale(1.08)}
+/* c39 智能食谱：刀叉分开 */
+#dock-4:active svg{transform:scaleX(1.3) rotate(-6deg)}
+/* c40 主题色：调色盘转半圈 */
+#dock-5:active svg{transform:rotate(-120deg)}
+/* c41 AI 排餐：星星放大一闪 */
+#dock-6:active svg{transform:scale(1.25) rotate(18deg);filter:drop-shadow(0 0 6px var(--tint-glow))}
+/* c42 快捷栏的字：跳一下 */
+.dock2 .dk[data-tk] b{animation:t-hop .45s var(--spring)}
+/* c43 快捷栏图标画一笔：线条重新画出来 */
+.dock2 .dk[data-tk] svg path{animation:t-draw .55s ease-out}
+
+/* —— 今天吃什么 —— */
+/* c44 换一份：两个箭头转一圈 */
+#btn-replan[data-tk] svg{animation:t-spin .6s cubic-bezier(.3,.1,.2,1)}
+/* c45 换一份：胶囊压一下 */
+#btn-replan[data-tk]{animation:t-squash .45s ease-out}
+/* c46 AI 排餐胶囊：按住星星闪 */
+#btn-ai svg{transition:transform .3s var(--spring),filter .3s}
+#btn-ai:active svg{transform:scale(1.3) rotate(30deg);filter:drop-shadow(0 0 5px var(--tint-glow))}
+/* c47 打勾：勾和圆一起弹 */
+.check[data-tk] svg{animation:t-pop .5s var(--spring)}
+/* c48 打勾：菜名上划一道线 */
+.item.done:has(.check[data-tk]) .nm b span{background:linear-gradient(currentColor,currentColor) no-repeat 0 58%/100% 1.5px;animation:t-strike .4s ease-out}
+/* c49 打勾：右边的千卡往上翻 */
+.item:has(.check[data-tk]) .rt>b{display:inline-block;animation:t-tick .4s ease-out}
+/* c50 取消勾：圆缩一下 */
+.item:not(.done):has(.check[data-tk]) .check svg{animation:t-unpop .35s ease-out}
+/* c51 点一样菜：按住整行往右挪 */
+.item .body:active{transform:translateX(4px)}
+/* c52 加食物「＋」：按住转 90° */
+.addbtn svg{transition:transform .3s var(--spring)}
+.addbtn:active svg{transform:rotate(90deg)}
+/* c53 每一餐左上的图标：这一餐有东西打勾时跳一下 */
+.meal:has(.check[data-tk]) .mi svg{animation:t-hop .5s var(--spring)}
+/* c54 一餐全吃完：「吃完了」牌子弹出来 */
+.meal.alldone:has(.check[data-tk]) .donebadge{animation:t-pop .6s var(--spring)}
+/* c55 钠的卡：按住盐瓶歪 */
+#nf-na .ico{transition:transform .3s var(--spring)}
+#nf-na:active .ico{transform:rotate(-25deg)}
+/* c56 纤维的卡：按住叶子摆 */
+#nf-fb .ico{transition:transform .3s var(--spring);transform-origin:20% 90%}
+#nf-fb:active .ico{transform:rotate(16deg)}
+/* c57 AI 提示条：按住边缘亮一下 */
+.note.tap:active{box-shadow:0 0 0 2px color-mix(in srgb,var(--tint) 45%,transparent)}
+
+/* —— 身体数据 —— */
+/* c58 「编辑 / 完成」：字翻一圈 */
+#cards-edit[data-tk]{animation:t-flipx .45s ease-out}
+/* c59 编辑时每张卡轻轻抖（像手机桌面整理图标） */
+.wgrid.editing .wslot{animation:t-jiggle .16s ease-in-out infinite alternate}
+.wgrid.editing .wslot:nth-child(2n){animation-delay:-.08s}
+/* c60 卡片右上「−」：按住转 45° */
+.rmx{transition:transform .25s var(--spring)}
+.rmx:active{transform:scale(.75) rotate(45deg)}
+/* c61 虚线框「＋」：按住加号转 90° */
+.wadd svg{transition:transform .3s var(--spring)}
+.wadd:active svg{transform:rotate(90deg)}
+/* c62 数据卡：按住整张往下沉 */
+.wslot:active>*:first-child{transform:translateY(2px) scale(.97);transition:transform .2s}
+/* c63 等级卡：按住宝石侧过来 */
+.rankcard .gem{transition:transform .35s var(--spring)}
+.rankcard:active .gem{transform:perspective(200px) rotateY(40deg)}
+/* c64 等级卡：按住经验条亮一下 */
+.rankcard:active .xpbar{filter:brightness(1.5);transition:filter .2s}
+
+/* —— 整页（饮食 / 计划） —— */
+/* c65 饮食页图表钮：按住柱子压下去 */
+#tgt-open svg{transition:transform .3s var(--spring);transform-origin:50% 90%}
+#tgt-open:active svg{transform:scaleY(.7)}
+/* c66 日历下面的小横条：点了拉长一下 */
+.grabber[data-tk] i{animation:t-stretch .45s ease-out}
+/* c67 展开 / 收起日历时，今天那一格弹一下 */
+.warc:has(.grabber[data-tk]) .wd.now b{display:inline-block}
+.warc:has(.grabber[data-tk]) .wd.now b,.warc:has(.grabber[data-tk]) .calc.today{animation:t-pop .5s var(--spring)}
+/* c68 智能食谱卡：按住往里倒一点 */
+.smartcard:active{transform:perspective(500px) rotateX(5deg) scale(.97)}
+/* c69 智能食谱卡的 ×：按住转 90° */
+.x2{transition:transform .25s var(--spring)}
+.x2:active{transform:rotate(90deg) scale(.8)}
+/* c70 「记录饮食」：按住加号转 90° */
+.fpill .fp-go svg{transition:transform .3s var(--spring)}
+#log-open:active .fp-go svg{transform:rotate(90deg)}
+/* c71 收藏圆钮：按住图标往上抬 */
+.lb-ic svg{transition:transform .3s var(--spring)}
+#log-fav:active svg{transform:translateY(-3px)}
+/* c72 「安排计划」长条：按住箭头往右顶 */
+#plan-cta:active .fp-go svg{transform:translateX(4px)}
+/* c73 「换计划」：按住加号转 */
+.pill2 svg{transition:transform .3s var(--spring)}
+.sech .pill2:active svg{transform:rotate(90deg)}
+/* c74 计划页铅笔：按住写一笔 */
+.phead .pic svg{transition:transform .3s var(--spring)}
+.phead .pr .pic:first-child:active svg{transform:rotate(-22deg)}
+/* c75 计划页日历钮：点了翻一下 */
+.phead .pr .pic:nth-child(2)[data-tk] svg{animation:t-flipx .5s ease-out}
+/* c76 计划板块每一行：点了亮一下 */
+.prow[data-tk]{animation:t-flash .5s ease-out}
+
+/* —— 记录饮食面板：四格各有各的动作（按住） —— */
+.slot2 svg{transition:transform .35s var(--spring),filter .3s}
+/* c77 早餐：太阳升起来 */
+#log-b:active svg{transform:translateY(-4px)}
+/* c78 中餐：太阳转 45° */
+#log-l:active svg{transform:rotate(45deg) scale(1.1)}
+/* c79 晚餐：月亮摇一下 */
+#log-d:active svg{transform:rotate(-24deg)}
+/* c80 加餐：小勺往碗里舀 */
+#log-s:active svg{transform:rotate(28deg) translateY(2px)}
+/* c81 「历史」：按住时钟指针往回拨 */
+.hist svg{transition:transform .4s var(--spring)}
+.hist:active svg{transform:rotate(-90deg)}
+/* c82 四格：按住发一点光 */
+.slot2:active{box-shadow:0 0 0 2px color-mix(in srgb,var(--tint) 40%,transparent),0 10px 24px -10px var(--tint-glow)}
+
+/* —— 拍摄餐食 —— */
+/* c83 快门：内圈缩一下 */
+#cam-shoot[data-tk] i{animation:t-shut .35s ease-out}
+/* c84 快门：取景框闪白 */
+.campage:has(#cam-shoot[data-tk]) .vf{animation:t-vf .45s ease-out}
+/* c85 快门：四个角往里收（对焦） */
+.campage:has(#cam-shoot[data-tk]) .vf .cn{animation:t-corner .45s ease-out}
+/* c86 快门：「请完整拍摄食物」跳一下 */
+.campage:has(#cam-shoot[data-tk]) .vf-chip{animation:t-hop .5s var(--spring)}
+/* c87 相册：按住图片歪一下 */
+.cb svg{transition:transform .3s var(--spring)}
+#cam-album:active svg{transform:rotate(-12deg) scale(1.1)}
+/* c88 文字记录：按住几行字往右伸 */
+#cam-text:active svg{transform:scaleX(1.2)}
+/* c89 搜食物：按住放大镜晃 */
+#cam-search svg{transition:transform .3s var(--spring)}
+#cam-search:active svg{transform:rotate(-20deg) scale(1.1)}
+/* c90 快门：按住外圈收紧 */
+#cam-shoot:active{transform:scale(.9)}
+
+/* —— 全部收藏 —— */
+/* c91 左边分类：图标弹一下 */
+.rail button[data-tk] svg{animation:t-pop .45s var(--spring)}
+/* c92 左边分类：选中的那格从下往上浮 */
+.rail[data-tkp] button[aria-pressed="true"]{animation:t-rise .35s ease-out}
+/* c93 点一样食物：右边加号转一圈 */
+.frow[data-tk] i{animation:t-spin .5s cubic-bezier(.3,.1,.2,1)}
+/* c94 点一样食物：整行闪一下绿 */
+.frow[data-tk]{animation:t-greenflash .6s ease-out}
+/* c95 「记到 早餐」：箭头翻一下 */
+#fav-slot[data-tk] svg{animation:t-flipx .45s ease-out}
+/* c96 「记到 早餐」：字从下面换上来 */
+#fav-slot[data-tk]{animation:t-rise .3s ease-out}
+/* c97 切换排列：图标转 90° */
+.favsheet .shr .pic:first-child[data-tk] svg{animation:t-q .35s var(--spring)}
+/* c98 管理食物：按住滑杆动一下 */
+.favsheet .shr .pic:last-child:active svg{transform:scaleX(-1)}
+.favsheet .shr .pic svg{transition:transform .3s var(--spring)}
+/* c99 拍照存入：按住相机闪 */
+.pillbtn svg{transition:filter .2s}
+#fav-snap:active svg{filter:drop-shadow(0 0 6px #fff) brightness(1.6)}
+/* c100 手动加：按住加号转 */
+.circbtn svg{transition:transform .3s var(--spring)}
+#fav-new:active svg{transform:rotate(90deg)}
+
+/* —— 智能食谱页 —— */
+/* c101 「用这个食谱」：外面一圈光 */
+#smart-use[data-tk]{animation:t-glow .6s ease-out}
+/* c102 「用这个食谱」：整排小店跳一下 */
+.smartpage:has(#smart-use[data-tk]) .street{animation:t-hop .5s var(--spring)}
+/* c103 「用这个食谱」：下面的小圆点一起闪 */
+.smartpage:has(#smart-use[data-tk]) .sp-dots{animation:t-beat .6s ease-out}
+
+/* —— 计划面板 / 改计划 —— */
+/* c104 计划卡：按住外圈亮 */
+.plancard:active{box-shadow:0 0 0 2px color-mix(in srgb,var(--tint) 50%,transparent)}
+/* c105 改计划：每一天的「低 / 中 / 高」格子弹一下 */
+.seqed button[data-tk],.seqrow button[data-tk]{animation:t-pop .4s var(--spring)}
+/* c106 少一天 / 多一天：跳一下 */
+.seqbtns button[data-tk]{animation:t-hop .4s var(--spring)}
+/* c107 新建计划：按住加号转 */
+.qb svg{transition:transform .3s var(--spring)}
+#plan-new:active svg{transform:rotate(90deg)}
+/* c108 「为什么」：按住问号摆 */
+#plan-why:active svg{transform:rotate(-18deg)}
+/* c109 计划入口箭头：按住往右顶 */
+.plannav svg{transition:transform .3s var(--spring)}
+.plannav:active svg{transform:translateX(4px)}
+/* c110 今天的计划一行：按住往右挪 */
+.qrow:active{transform:translateX(4px)}
+
+/* —— 食物页 —— */
+/* c111 「我的 / 食物库」：字跳一下 */
+#find-mine[data-tk],#find-lib[data-tk]{animation:t-hop .4s var(--spring)}
+/* c112 搜索框：点进去外圈亮起来 */
+#find-q:focus,#pick-q:focus{box-shadow:0 0 0 3px color-mix(in srgb,var(--tint) 35%,transparent);transition:box-shadow .25s}
+/* c113 食物库一行：按住往右挪 */
+.lrow .main:active{transform:translateX(4px);transition:transform .2s}
+/* c114 勾选一样食物：名字亮一下 */
+.lrow:has(.tog[data-tk]) .main b{animation:t-hop .4s var(--spring)}
+/* c115 购物清单：按住篮子晃 */
+#shop-open svg{transition:transform .3s var(--spring);transform-origin:50% 20%}
+#shop-open:active svg{transform:rotate(14deg)}
+/* c116 拍食物 / 拍包装：按住相机闪 */
+.snapcta svg{transition:filter .2s,transform .3s var(--spring)}
+.snapcta:active svg{filter:brightness(1.7);transform:scale(1.1)}
+/* c117 「记到…」：按住发光 */
+#lib-add:active{box-shadow:0 0 0 3px color-mix(in srgb,var(--tint) 40%,transparent)}
+/* c118 「存成我的食物」：心跳一下 */
+#lib-keep[data-tk]{animation:t-beat .6s ease-out}
+/* c119 AI 估算营养：星星闪 */
+#fd-ai[data-tk]{animation:t-glow .6s ease-out}
+/* c120 拍包装提示：按住相机放大 */
+.pkghint svg{transition:transform .3s var(--spring)}
+.pkghint:active svg{transform:scale(1.2)}
+
+/* —— 记录页 —— */
+/* c121 上个月：箭头往左冲 */
+.calnav svg{transition:transform .25s var(--spring)}
+.calnav:first-child[data-tk] svg{animation:t-nl .4s ease-out}
+/* c122 下个月：箭头往右冲 */
+.calnav:last-child[data-tk] svg,.calnav:nth-of-type(2)[data-tk] svg{animation:t-nr .4s ease-out}
+/* c123 点某一天：格子弹一下 */
+.calc[data-tk]{animation:t-pop .4s var(--spring)}
+/* c124 点某一天：外面一圈光 */
+.calc.sel[data-tk]{animation:t-pop .4s var(--spring),t-glow .6s ease-out}
+/* c125 记体重：按钮跳一下 */
+#kg-save[data-tk],#cal-kg-save[data-tk]{animation:t-hop .45s var(--spring)}
+
+/* —— 我的页 —— */
+/* c126 等级块：按住宝石侧过来 */
+.metile .gem{transition:transform .35s var(--spring)}
+.metile:active .gem{transform:perspective(200px) rotateY(-40deg)}
+/* c127 记录块：按住日历往后翻 */
+.metile .mtb svg{transition:transform .35s var(--spring)}
+.metile:active .mtb svg{transform:perspective(120px) rotateX(38deg)}
+/* c128 编辑资料：按住铅笔写一笔 */
+#me-edit svg{transition:transform .3s var(--spring)}
+#me-edit:active svg{transform:rotate(-22deg)}
+.nav .ic{transition:transform .35s var(--spring)}
+/* c129 我的计划：徽章转一点 */
+#nav-plan:active .ic{transform:rotate(30deg)}
+/* c130 AI 设置：放大一闪 */
+#nav-ai:active .ic{transform:scale(1.2) rotate(15deg)}
+/* c131 让 AI 帮你填：往下落 */
+#nav-aiimport:active .ic{transform:translateY(3px)}
+/* c132 云同步：往上飘 */
+#nav-cloud:active .ic{transform:translateY(-4px)}
+/* c133 数据：压扁 */
+#nav-data:active .ic{transform:scale(1.15,.85)}
+/* c134 关于：跳一下 */
+#nav-about:active .ic{transform:translateY(-3px) scale(1.08)}
+/* c135 每一行右边的箭头：往右顶 */
+.nav .chev{transition:transform .3s var(--spring)}
+.nav:active .chev{transform:translateX(4px)}
+/* c136 主题色圆点：弹一下 */
+.tdot[data-tk]{animation:t-pop .45s var(--spring)}
+/* c137 主题色圆点：放出一圈自己的颜色 */
+.tdot[data-tk]::before{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--c);animation:t-tapring .55s ease-out forwards;pointer-events:none}
+/* c138 主题色：其他圆点让一下 */
+.tdots[data-tkp] .tdot:not([data-tk]){animation:t-unpop .35s ease-out}
+/* c139 选卡片面板：点一张卡弹一下 */
+.wpick[data-tk]{animation:t-pop .45s var(--spring)}
+/* c140 选卡片面板：「添加 / 已添加」字跳一下 */
+.wslot:has(.wpick[data-tk]) .wst{animation:t-hop .45s var(--spring)}
+
+/* —— 底部标签栏：四个图标各有各的动作 —— */
+.tabs button svg{transform-origin:50% 60%}
+/* c141 今天：日历纸翻一下 */
+#tab-today[data-tk] svg{animation:t-flipx .5s ease-out}
+/* c142 食物：篮子颠一下 */
+#tab-foods[data-tk] svg{animation:t-squash .45s ease-out}
+/* c143 记录：柱子压下去再弹起来 */
+#tab-records[data-tk] svg{transform-origin:50% 100%;animation:t-bars .5s ease-out}
+/* c144 我的：点头 */
+#tab-me[data-tk] svg{animation:t-wig .5s ease-out}
+/* c145 标签栏的字：跳一下 */
+.tabs button[data-tk] span{display:inline-block;animation:t-hop .45s var(--spring)}
+
+/* —— 其他 —— */
+/* c146 提示条（toast）出来时扫过一道光 */
+.toast{background-image:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.18) 50%,transparent 65%);background-size:250% 100%;background-repeat:no-repeat;animation:toast 2.6s var(--smooth) both,t-sheen .9s ease-out .2s both}
+/* c147 拍照识别结果：勾选一样时整行闪绿 */
+.snapres .tog[data-tk]{animation:t-pop .45s var(--spring)}
+.snapres li:has(.tog[data-tk]),.snapres .row:has(.tog[data-tk]){animation:t-greenflash .6s ease-out}
+/* c148 全屏动画里的按钮（停止、好的）：压一下 */
+.fsbtn[data-tk]{animation:t-squash .4s ease-out}
+/* c149 面板缩回按钮以后，按钮「接住」它弹一下 */
+[data-back]{animation:t-land .45s var(--spring)}
+/* c150 整页收起、按钮飞回封面以后，箭头圆弹一下 */
+#cover-cta[data-back] i,.cv-big[data-back] b{animation:t-pop .5s var(--spring)}
+
+@media (prefers-reduced-motion:reduce){.tapring{display:none}[data-tk],[data-tk] *,[data-tkp] *,[data-back],[data-back] *{animation:none!important}.wgrid.editing .wslot{animation:none}}

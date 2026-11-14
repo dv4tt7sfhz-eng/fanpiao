@@ -1,5 +1,6 @@
 // 入口：没建档先建档，建好以后是四个标签页
-import { html, render, useState, useEffect, useReducer, useRef, app, UI } from "./ui.js";
+import { html, render, useState, useEffect, useLayoutEffect, useReducer, useRef, app, UI } from "./ui.js";
+import { installTap, source, grow, shrink, snap, leave, fadeRest, kickEl } from "./fly.js";
 import { Onboarding } from "./onboarding.js";
 import { TargetSheet, ModeSheet, ItemSheet, PickSheet, AISheet } from "./today.js";
 import { Today, FoodsTab, RecordsTab, MeView, DPage, LogSheet, FavSheet, CardsSheet, RankSheet, ThemeSheet, CamSheet, SmartSheet } from "./home.js";
@@ -29,6 +30,10 @@ const SHEETS = { target: TargetSheet, mode: ModeSheet, item: ItemSheet, pick: Pi
 const FSC = { splash: Splash, calc: Calc, ai: AIThinking, wipe: Wipe, cele: Celebrate };
 const root = document.documentElement;
 installRipple();
+installTap();
+// 现在开着的那一层面板（底部面板、拍摄页、智能食谱页）
+const topSheet = () => document.querySelector(".shade > .sheet") || document.querySelector(".campage, .smartpage");
+const isFull = (el) => el.matches(".campage, .smartpage");
 
 function App() {
   const [, force] = useReducer((x) => x + 1, 0);
@@ -57,10 +62,13 @@ function App() {
   const timer = useRef(0), fsTimer = useRef(0);
   app.rerender = force;
 
-  const openSheet = (s) => { clearTimeout(timer.current); root.classList.remove("sheet-closing"); root.style.setProperty("--sy", window.scrollY + "px"); setSheet(s); };
+  // 打开面板：记下刚点的那个框，面板从它里面长出来
+  const openSheet = (s) => { clearTimeout(timer.current); root.classList.remove("sheet-closing"); root.style.setProperty("--sy", window.scrollY + "px"); const src = s.still ? null : source(); setSheet({ ...s, __src: src, __snap: src ? snap() : null }); };
+  useLayoutEffect(() => { if (!sheet || !sheet.__src) return; const el = topSheet(); if (el) grow(el, sheet.__src, isFull(el) ? { full: true, rad: "0px", snap: sheet.__snap } : { snap: sheet.__snap }); }, [sheet]);
   // 关面板时先播完收起的动画，再真的拿掉
   const closeSheet = () => {
     if (!sheet) return;
+    const el = topSheet(); if (el) shrink(el, isFull(el) ? { rad: "0px" } : {});
     root.classList.add("sheet-closing");
     clearTimeout(timer.current);
     timer.current = setTimeout(() => { root.classList.remove("sheet-closing"); setSheet(null); }, 300);
@@ -68,7 +76,7 @@ function App() {
   const go = (t) => {
     if (pg) closePage();
     if (t === tab) return;
-    haptic(6); setFromFs(false);
+    haptic(6); setFromFs(false); kickEl(document.getElementById("tab-" + t));
     setDir(TABS.findIndex((x) => x.id === t) > TABS.findIndex((x) => x.id === tab) ? "r" : "l");
     setTab(t);
   };
@@ -80,8 +88,14 @@ function App() {
   // 先播完退场，再拿掉
   UI.fsOut = () => { setFs((f) => (f ? { ...f, closing: true } : f)); clearTimeout(fsTimer.current); fsTimer.current = setTimeout(() => setFs(null), 480); };
   // 整页（饮食详情、计划详情）：从封面卡片的位置长出来，收起时缩回去
-  UI.page = (o) => { clearTimeout(pgTimer.current); haptic(6); setPg({ k: Date.now(), ...o }); };
-  const closePage = () => { if (!pg) return; setPg((p) => (p ? { ...p, closing: true } : p)); clearTimeout(pgTimer.current); pgTimer.current = setTimeout(() => setPg(null), calm() ? 0 : 520); };
+  // 没给起点就从刚点的那个框长出来；同时记下外面小框的位置，整页里同名的小框从那里飞过来
+  UI.page = (o) => { clearTimeout(pgTimer.current); haptic(6); const from = o.from || (source() || {}).r; setPg({ k: Date.now(), ...o, from, snap: snap() }); };
+  const closePage = () => {
+    if (!pg) return;
+    // 整页里的小框飞回外面同名的位置，其他的淡掉
+    const box = document.querySelector(".dpage .dp-box");
+    if (box && !pg.closing && box.dataset.landed) { const fl = leave(box); if (fl.length) { box.parentElement.dataset.flew = "1"; const sc = box.querySelector(".dp-scroll"), lb = box.querySelector(".logbar"); if (sc) fadeRest(sc, fl, 260); if (lb) fadeRest(lb, fl, 180); } }
+    setPg((p) => (p ? { ...p, closing: true } : p)); clearTimeout(pgTimer.current); pgTimer.current = setTimeout(() => setPg(null), calm() ? 0 : 520); };
   UI.closePage = closePage;
   UI.open = openSheet; UI.close = closeSheet; UI.go = go; goRef.current = go;
   UI.toast = (t) => { setToast({ t, k: Date.now() }); clearTimeout(UI._t); UI._t = setTimeout(() => setToast(null), 2600); };

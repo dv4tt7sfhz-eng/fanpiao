@@ -1,7 +1,7 @@
 // 公用小零件：全局数据、保存、弹出面板、分段选择
-import { html, render, useState, useEffect, useReducer, useRef, useMemo } from "../vendor/preact-htm.js";
+import { html, render, useState, useEffect, useLayoutEffect, useReducer, useRef, useMemo } from "../vendor/preact-htm.js";
 import { load, save, prune } from "./store.js";
-export { html, render, useState, useEffect, useReducer, useRef, useMemo };
+export { html, render, useState, useEffect, useLayoutEffect, useReducer, useRef, useMemo };
 
 export const app = { S: load(), rerender() {} };
 export const UI = { open() {}, close() {}, toast() {}, go() {} };
