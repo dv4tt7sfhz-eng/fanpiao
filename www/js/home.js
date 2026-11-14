@@ -309,7 +309,7 @@ export function DataCard({ k, S, te, T, demo }) {
   } else if (k === "na") {
     const v = Math.min(1, (te.na || 0) / (T.naMax || 2000));
     body = html`<span class="wv num">${fmt(te.na || 0)}<small>/ ${fmt(T.naMax || 2000)} mg</small></span>
-      <div class="gauge" style=${`--v:${v.toFixed(3)}`}><svg viewBox="0 0 120 60"><path class="tk" d="M12 56 A48 48 0 0 1 108 56" /><path class="fl" pathLength="1" d="M12 56 A48 48 0 0 1 108 56" />
+      <div class="mgauge" style=${`--v:${v.toFixed(3)}`}><svg viewBox="0 0 120 60"><path class="tk" d="M12 56 A48 48 0 0 1 108 56" /><path class="fl" pathLength="1" d="M12 56 A48 48 0 0 1 108 56" />
         <g class="nd"><path d="M60 56 L60 20" /><circle cx="60" cy="56" r="5" /></g></svg></div>`;
   } else if (k === "fb") {
     const rows = weekRows(S), mx = Math.max(T.fbMin || 25, ...rows.map((r) => (r.t ? r.t.fb : 0)));
@@ -439,6 +439,30 @@ function WeekArc({ S, label, open, setOpen }) {
   </div>`;
 }
 
+// ---------- 浮窗：手指往上推（往下看）就收成左下角一个圆；往下拉就从圆里长回长条 ----------
+function useShut(ref) {
+  const [shut, setShut] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    let y0 = null, last = el.scrollTop, s = false;
+    const put = (v) => { if (v !== s) { s = v; setShut(v); } };
+    const ts = (e) => { y0 = e.touches[0].clientY; };
+    const tm = (e) => { if (y0 == null) return; const y = e.touches[0].clientY, dy = y - y0;
+      if (dy < -14) { put(true); y0 = y; } else if (dy > 14) { put(false); y0 = y; } };
+    const te = () => { y0 = null; };
+    // 惯性滚动时也跟着方向走；回弹（超出顶部或底部）不算
+    const sc = () => { const t = el.scrollTop, max = el.scrollHeight - el.clientHeight;
+      if (t < 0 || t > max) return; const d = t - last; last = t;
+      if (d > 4 && t > 8) put(true); else if (d < -4) put(false); };
+    const wh = (e) => { if (e.deltaY > 2) put(true); else if (e.deltaY < -2) put(false); };
+    const o = { passive: true };
+    el.addEventListener("touchstart", ts, o); el.addEventListener("touchmove", tm, o); el.addEventListener("touchend", te, o); el.addEventListener("touchcancel", te, o);
+    el.addEventListener("scroll", sc, o); el.addEventListener("wheel", wh, o);
+    return () => { el.removeEventListener("touchstart", ts); el.removeEventListener("touchmove", tm); el.removeEventListener("touchend", te); el.removeEventListener("touchcancel", te); el.removeEventListener("scroll", sc); el.removeEventListener("wheel", wh); };
+  }, []);
+  return shut;
+}
+
 function DietPage({ pg, onClose }) {
   const { S, day, byId, T } = context();
   const [cal, setCal] = useState(!!pg.cal);
@@ -448,8 +472,9 @@ function DietPage({ pg, onClose }) {
   const te = sumItems(planItems(plan, true), get);
   const pct = T.kcal ? Math.min(1, te.kcal / T.kcal) : 0;
   const meals = plan ? SLOTS.filter((s) => plan.meals[s].some((it) => it.done)).length : 0;
+  const sc = useRef(null), shut = useShut(sc);
   const eaten = plan ? SLOTS.map((s) => [s, plan.meals[s].filter((it) => it.done && byId[it.id]).map((it) => ({ n: byId[it.id].n, k: byId[it.id].k * it.qty }))]).filter(([, l]) => l.length) : [];
-  return html`<div class="dp-scroll">
+  return html`<div class="dp-scroll" ref=${sc}>
     <${PHead} onClose=${onClose} right=${html`<button class="pic" id="tgt-open" onClick=${() => UI.open({ t: "nafb" })} aria-label="饮食分析"><${Ic} d=${I.stats} /></button>`} />
     <div class="dsum">
       <div class="cv-big"><b class="num"><${Num} v=${te.kcal} f=${fmt} /></b><em>kcal</em></div>
@@ -467,8 +492,8 @@ function DietPage({ pg, onClose }) {
       : html`<p class="empty3">这一天还没有餐食记录</p>`}
     <div class="dp-pad"></div>
   </div>
-  <div class="logbar">
-    <button class="lb-main" id="log-open" onClick=${() => UI.open({ t: "log" })}><span>记录饮食</span><i id="log-add"><${Ic} d=${I.plus} /></i></button>
+  <div class=${"logbar fab two" + (shut ? " shut" : "")}>
+    <button class="fpill glass" id="log-open" onClick=${() => UI.open({ t: "log" })} aria-label="记录饮食"><span class="fp-tx">记录饮食</span><i class="fp-go" id="log-add"><${Ic} d=${I.plus} /></i></button>
     <button class="lb-ic" id="log-fav" onClick=${() => UI.open({ t: "fav" })} aria-label="全部收藏"><${Ic} d="M8 3.5h8a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H8A1.5 1.5 0 0 1 6.5 19V5A1.5 1.5 0 0 1 8 3.5zM10 17h4" /></button>
   </div>`;
 }
@@ -480,7 +505,8 @@ function PlanPage({ onClose }) {
   const pname = S.cycle && S.cycle.name ? S.cycle.name : info.plan.n;
   const lab = dayLabel(S, today);
   const cyc = !!T.kind;
-  return html`<div class="dp-scroll">
+  const sc = useRef(null), shut = useShut(sc);
+  return html`<div class="dp-scroll" ref=${sc}>
     <${PHead} onClose=${onClose} date right=${html`<button class="pic" onClick=${() => UI.open({ t: "planedit", id: info.plan.id })} aria-label="改这个计划"><${Ic} d=${I.edit} /></button><button class="pic" onClick=${() => setCal(!cal)} aria-label="日历"><${Ic} d=${I.cal} /></button>`} />
     <div class="ptitle"><h1>${T.kind ? KIND[T.kind].n : "照常吃"}</h1>
       <span>${pname}${lab ? " · " + lab : ""}</span><span>今天 ${fmt(T.kcal)} 千卡 · 蛋白 ${T.protein} g · 碳水 ${T.carb} g · 脂肪 ${T.fat} g</span>
@@ -494,7 +520,7 @@ function PlanPage({ onClose }) {
     : html`<div class="noplan"><${Ic} d="M12 5v14M6 13l6 6 6-6" /><b>暂无安排</b><span>选一个碳循环计划，安排每一天吃多少</span></div>`}
     <div class="dp-pad"></div>
   </div>
-  <div class="logbar one"><button class="cv-cta wide" id="plan-cta" onClick=${() => UI.open({ t: "plan" })}>安排计划<i><${Ic} d=${I.arrow} /></i></button></div>`;
+  <div class=${"logbar fab one" + (shut ? " shut" : "")}><button class="fpill" id="plan-cta" onClick=${() => UI.open({ t: "plan" })} aria-label="安排计划"><span class="fp-tx">安排计划</span><i class="fp-go"><${Ic} d=${I.arrow} /></i></button></div>`;
 }
 
 // ---------- 记录饮食：早午晚加四格，点一格就长成「拍摄餐食」 ----------
