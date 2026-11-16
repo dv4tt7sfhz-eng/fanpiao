@@ -126,8 +126,9 @@ struct ActivityOpt: Codable, Hashable, Sendable { var v: Double; var n: String; 
 struct GoalsVM: Decodable, Sendable { var goals: [GoalOpt]; var activity: [ActivityOpt] }
 
 enum Fmt {
-    static func n(_ v: Double) -> String { String(Int(v.rounded())) }
+    static func n(_ v: Double) -> String { v.isFinite ? String(Int(v.rounded())) : "—" }
     static func one(_ v: Double) -> String {
+        guard v.isFinite else { return "—" }
         let r = (v * 10).rounded() / 10
         return r == r.rounded() ? String(Int(r)) : String(format: "%.1f", r)
     }

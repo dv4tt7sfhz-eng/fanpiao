@@ -67,11 +67,14 @@ jobs:
           shot 6-foods -fpDemo -fpTab 1
           shot 7-records -fpDemo -fpTab 2
           shot 8-me -fpDemo -fpTab 3
+          sleep 3
+          xcrun simctl spawn "$DEV" log show --last 2m --style compact --predicate 'process == "Fanpiao"' 2>/dev/null | grep -iE "fatal|crash|error|exception|precondition" | tail -40 > ../shots/applog.txt || true
+          cp ~/Library/Logs/DiagnosticReports/Fanpiao* ../shots/ 2>/dev/null || true
           ls -la ../shots
       - uses: actions/upload-artifact@v4
         with:
           name: fanpiao-native
           path: |
             fanpiao-native-unsigned.ipa
-            shots/*.png
+            shots/*
           retention-days: 14
