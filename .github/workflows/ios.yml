@@ -1,8 +1,6 @@
 # 用 GitHub 的苹果电脑编出一个没签名的 ipa（自签用）
-name: iOS 安装包（未签名）
+name: iOS 网页外壳版（旧，手动运行）
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 jobs:
   ipa:

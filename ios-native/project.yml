@@ -1,0 +1,40 @@
+# 饭票 iPhone 原生版（SwiftUI + iOS 26 液态玻璃）。用 XcodeGen 生成 Xcode 工程：xcodegen generate
+name: Fanpiao
+options:
+  bundleIdPrefix: com.fanpiao
+  deploymentTarget:
+    iOS: "18.0"
+  developmentLanguage: zh-Hans
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "3.0.0"
+    CURRENT_PROJECT_VERSION: "20"
+targets:
+  Fanpiao:
+    type: application
+    platform: iOS
+    sources:
+      - path: Fanpiao
+        excludes: ["core.js", "Info.plist"]
+      - path: Fanpiao/core.js
+        buildPhase: resources
+    info:
+      path: Fanpiao/Info.plist
+      properties:
+        CFBundleDisplayName: 饭票
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDevelopmentRegion: zh-Hans
+        UILaunchScreen: {}
+        UIUserInterfaceStyle: Dark
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fanpiao.app
+        PRODUCT_NAME: Fanpiao
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGNING_ALLOWED: NO

@@ -1,0 +1,77 @@
+# 饭票 iPhone 原生版：用 Xcode 26（iOS 26 SDK，液态玻璃）编出没签名的 ipa，并在模拟器里截几张图
+name: iPhone 原生版（SwiftUI）
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 打包排餐引擎
+        run: |
+          npm ci
+          node tools/build-core.mjs
+      - name: 选 Xcode 26，生成工程
+        run: |
+          X=$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)
+          echo "用 $X"
+          sudo xcode-select -s "$X"
+          xcodebuild -version
+          brew install xcodegen
+          cd ios-native && xcodegen generate
+      - name: 编译真机版（不签名）
+        run: |
+          cd ios-native
+          xcodebuild -project Fanpiao.xcodeproj -scheme Fanpiao -configuration Release -sdk iphoneos \
+            -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build 2>&1 | tee build.log | grep -E "error:|warning: unre|BUILD" || true
+          test -d build/Build/Products/Release-iphoneos/Fanpiao.app
+          mkdir -p Payload && cp -R build/Build/Products/Release-iphoneos/Fanpiao.app Payload/
+          zip -qry ../fanpiao-native-unsigned.ipa Payload
+      - name: 上传编译日志（失败时看）
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: ios-native/build.log
+      - name: 模拟器版 + 截图
+        run: |
+          cd ios-native
+          xcodebuild -project Fanpiao.xcodeproj -scheme Fanpiao -configuration Debug -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath simbuild CODE_SIGNING_ALLOWED=NO build > sim.log 2>&1 || (grep -E "error:" sim.log; exit 1)
+          DEV=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys
+          d=json.load(sys.stdin)['devices']
+          c=[(k,x) for k,v in d.items() if 'iOS-26' in k for x in v if x['name'].startswith('iPhone')]
+          c.sort(key=lambda kx:(('17 Pro' not in kx[1]['name']), kx[0]), reverse=False)
+          print(c[0][1]['udid'] if c else '')")
+          echo "模拟器 $DEV"
+          xcrun simctl boot "$DEV" || true
+          xcrun simctl bootstatus "$DEV" -b
+          xcrun simctl status_bar "$DEV" override --time "9:41" --batteryState charged --batteryLevel 100 || true
+          xcrun simctl install "$DEV" simbuild/Build/Products/Debug-iphonesimulator/Fanpiao.app
+          mkdir -p ../shots
+          shot() { n=$1; shift; xcrun simctl terminate "$DEV" com.fanpiao.app >/dev/null 2>&1 || true; xcrun simctl launch "$DEV" com.fanpiao.app "$@" >/dev/null; sleep 7; xcrun simctl io "$DEV" screenshot "../shots/$n.png" >/dev/null; }
+          shot 0-onboard
+          shot 1-today -fpDemo -fpTab 0
+          shot 2-plan -fpDemo -fpTab 0 -fpShow plan
+          shot 3-add -fpDemo -fpTab 0 -fpShow add
+          shot 4-plans -fpDemo -fpTab 0 -fpShow plans
+          shot 5-detail -fpDemo -fpTab 0 -fpShow detail
+          shot 6-foods -fpDemo -fpTab 1
+          shot 7-records -fpDemo -fpTab 2
+          shot 8-me -fpDemo -fpTab 3
+          ls -la ../shots
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fanpiao-native
+          path: |
+            fanpiao-native-unsigned.ipa
+            shots/*.png
+          retention-days: 14
