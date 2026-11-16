@@ -30,10 +30,13 @@ struct ExpandedPage: View {
     let accent: Accent
     let ns: Namespace.ID
     var close: () -> Void
+    /// 往下拖着关：带上松手时的速度
+    var dragClose: (CGFloat) -> Void
     var onPlans: () -> Void
     var onAdd: () -> Void
     @State private var plans: PlansVM?
     @State private var shown = false
+    @State private var drag: CGFloat = 0
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -50,9 +53,10 @@ struct ExpandedPage: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    Capsule().fill(.white.opacity(0.3)).frame(width: 40, height: 5).frame(maxWidth: .infinity).opacity(shown ? 1 : 0)
                     HStack(spacing: 12) {
                         Button(action: close) {
-                            Image(systemName: "chevron.down").font(.headline).frame(width: 44, height: 44)
+                            Image(systemName: "chevron.down").font(.subheadline.weight(.semibold)).frame(width: 44, height: 44)
                         }
                         .buttonStyle(.plain)
                         .glassCapsule()
@@ -60,6 +64,8 @@ struct ExpandedPage: View {
                         Spacer()
                     }
                     .opacity(shown ? 1 : 0)
+                    .contentShape(Rectangle())
+                    .gesture(pull)
                     if kind == 0 { diet } else { plan }
                 }
                 .padding(.horizontal, 18)
@@ -77,9 +83,9 @@ struct ExpandedPage: View {
                 } else {
                     Button(action: onAdd) {
                         HStack {
-                            Text("记录饮食").font(.headline)
+                            Text("记录饮食").font(.subheadline.weight(.semibold))
                             Spacer()
-                            Image(systemName: "plus").font(.headline).frame(width: 40, height: 40).background(accent.tint, in: Circle())
+                            Image(systemName: "plus").font(.subheadline.weight(.semibold)).frame(width: 40, height: 40).background(accent.tint, in: Circle())
                         }
                         .padding(.leading, 22).padding(.trailing, 8).padding(.vertical, 8)
                         .foregroundStyle(.white)
@@ -92,8 +98,27 @@ struct ExpandedPage: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
         }
-        .onAppear { withAnimation(.easeOut(duration: 0.3).delay(0.16)) { shown = true } }
+        .scaleEffect(1 - max(0, drag) / 2400, anchor: .top)
+        .offset(y: drag)
+        .onAppear { withAnimation(Motion.quick.delay(0.16)) { shown = true } }
         .task { if kind == 1 { plans = await model.plans() } }
+    }
+
+    /// 顶部那一条往下拖：跟手 1:1；往上拖是橡皮筋；松手看速度和距离决定关不关
+    private var pull: some Gesture {
+        DragGesture(minimumDistance: 6)
+            .onChanged { v in
+                let y = v.translation.height
+                drag = y >= 0 ? y : Motion.rubber(y, limit: 60)
+            }
+            .onEnded { v in
+                let speed = v.velocity.height
+                if drag > 140 || (speed > 700 && drag > 20) {
+                    dragClose(speed)
+                } else {
+                    withAnimation(Motion.release(velocity: -speed, distance: max(1, abs(drag)))) { drag = 0 }
+                }
+            }
     }
 
     private var dateText: String {
@@ -106,7 +131,7 @@ struct ExpandedPage: View {
         let ratio = h.T.kcal > 0 ? min(1, h.eaten.kcal / h.T.kcal) : 0
         return VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(Fmt.n(h.eaten.kcal)).font(.system(size: 52, weight: .bold, design: .rounded))
+                Text(Fmt.n(h.eaten.kcal)).font(.system(size: 48, weight: .bold, design: .rounded))
                     .matchedGeometryEffect(id: "num", in: ns)
                 Text("千卡").font(.title3.weight(.semibold)).foregroundStyle(Palette.ink2)
             }
@@ -127,7 +152,7 @@ struct ExpandedPage: View {
                 ForEach(h.meals) { m in
                     HStack {
                         Image(systemName: slotIcon(m.slot)).foregroundStyle(accent.tint).frame(width: 26)
-                        Text(m.name).font(.headline)
+                        Text(m.name).font(.subheadline.weight(.semibold))
                         Spacer()
                         Text("\(Fmt.n(m.sum.kcal)) 千卡 · ¥\(Fmt.yuan(m.sum.cost))").foregroundStyle(Palette.ink2)
                     }
@@ -143,7 +168,7 @@ struct ExpandedPage: View {
     // ---------- 计划这一面长出来的 ----------
     private var plan: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(h.kindName.isEmpty ? h.planName : h.kindName).font(.system(size: 40, weight: .heavy, design: .rounded))
+            Text(h.kindName.isEmpty ? h.planName : h.kindName).font(.system(size: 48, weight: .bold, design: .rounded))
                 .matchedGeometryEffect(id: "title", in: ns, anchor: .topLeading)
             Group {
                 Text(h.label.isEmpty ? h.planTag : h.label).font(.subheadline).foregroundStyle(Palette.ink2)

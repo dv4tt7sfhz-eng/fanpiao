@@ -34,7 +34,7 @@ struct FoodsView: View {
             .searchable(text: $q, prompt: "搜我的食物和 1700 种食物库")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { withAnimation(.snappy) { onlyOn.toggle() } } label: {
+                    Button { withAnimation(Motion.quick) { onlyOn.toggle() } } label: {
                         Label(onlyOn ? "全部" : "只看勾选的", systemImage: onlyOn ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                     }
                 }
@@ -54,7 +54,7 @@ struct FoodRow: View {
     var body: some View {
         Toggle(isOn: Binding(get: { food.on }, set: set)) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(food.n).font(.body.weight(.medium))
+                Text(food.n).font(.subheadline.weight(.medium))
                 Text("每\(food.u)：\(Fmt.n(food.k)) 千卡 · 蛋白 \(Fmt.one(food.p)) g · ¥\(Fmt.yuan(food.price))\(food.ck >= 2 ? " · 要开火" : "")")
                     .font(.caption).foregroundStyle(Palette.ink2)
             }
@@ -69,7 +69,7 @@ struct LibRowLink: View {
     var body: some View {
         Button { open = true } label: {
             VStack(alignment: .leading, spacing: 3) {
-                Text(hit.n).font(.body.weight(.medium)).foregroundStyle(.primary)
+                Text(hit.n).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
                 Text("\(Fmt.n(hit.k)) 千卡 · 蛋白 \(Fmt.one(hit.p)) g · 碳水 \(Fmt.one(hit.cb)) g").font(.caption).foregroundStyle(Palette.ink2)
             }
         }
@@ -95,7 +95,7 @@ struct RecordsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Picker("", selection: $n.animation(.snappy)) { Text("最近 7 天").tag(7); Text("最近 30 天").tag(30) }
+                    Picker("", selection: $n.animation(Motion.quick)) { Text("最近 7 天").tag(7); Text("最近 30 天").tag(30) }
                         .pickerStyle(.segmented)
                     if let vm {
                         let logged = vm.days.filter { $0.e.kcal > 0 }
@@ -105,7 +105,7 @@ struct RecordsView: View {
                             Stat(v: "\(Fmt.n(vm.streak)) 天", l: "连续记录")
                         }
                         VStack(alignment: .leading, spacing: 12) {
-                            Picker("", selection: $metric.animation(.snappy)) { Text("热量").tag(0); Text("蛋白").tag(1); Text("花费").tag(2) }
+                            Picker("", selection: $metric.animation(Motion.quick)) { Text("热量").tag(0); Text("蛋白").tag(1); Text("花费").tag(2) }
                                 .pickerStyle(.segmented)
                             Chart {
                                 ForEach(vm.days) { d in
@@ -117,7 +117,7 @@ struct RecordsView: View {
                                     RuleMark(y: .value("目标", metric == 0 ? last.T.kcal : last.T.protein))
                                         .foregroundStyle(Palette.ink2)
                                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                                        .annotation(position: .top, alignment: .trailing) { Text("目标").font(.caption2).foregroundStyle(Palette.ink2) }
+                                        .annotation(position: .top, alignment: .trailing) { Text("目标").font(.caption).foregroundStyle(Palette.ink2) }
                                 }
                             }
                             .chartXAxis { AxisMarks(values: .automatic(desiredCount: n == 7 ? 7 : 6)) }
@@ -184,9 +184,9 @@ struct MeView: View {
                             Text("饭").font(.system(size: 34, weight: .heavy)).foregroundStyle(.white)
                                 .frame(width: 78, height: 78)
                                 .glassCard(cornerRadius: 39, tint: accent.tint.opacity(0.7))
-                            Text("饭票同学").font(.title2.weight(.bold))
+                            Text("饭票同学").font(.title3.weight(.bold))
                             Text("\(h.goalName) · 每天 \(Fmt.n(h.T.kcal)) 千卡 · \(Fmt.n(p.height ?? 0)) cm \(Fmt.one(p.weight ?? 0)) kg")
-                                .font(.footnote).foregroundStyle(Palette.ink2)
+                                .font(.caption).foregroundStyle(Palette.ink2)
                             HStack(spacing: 10) {
                                 Stat(v: h.level.name, l: "打卡等级")
                                 Stat(v: "\(Fmt.n(h.level.cur))/\(Fmt.n(h.level.need))", l: "经验")
@@ -260,7 +260,7 @@ struct SettingRow: View {
     var body: some View {
         Button(action: tap) {
             HStack(spacing: 14) {
-                Image(systemName: icon).font(.body.weight(.semibold)).foregroundStyle(.white)
+                Image(systemName: icon).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
                     .frame(width: 30, height: 30).background(color, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 Text(title).foregroundStyle(.primary)
                 Spacer()

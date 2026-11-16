@@ -19,11 +19,16 @@ final class AppModel {
         return dir.appendingPathComponent("fanpiao.v1.json")
     }()
     private let engine = Engine.shared
+    private var homeFile: URL { file.deletingLastPathComponent().appendingPathComponent("home-cache.json") }
 
     init() {
         if let s = try? String(contentsOf: file, encoding: .utf8), !s.isEmpty { state = s }
         else { state = (try? engine.callSync("blank", [], as: StateOnly.self).S) ?? "" }
         hasProfile = (try? engine.callSync("hasProfile", [.raw(state)], as: Bool.self)) ?? false
+        // 先把上次的首页直接摆出来（同一天才用），后台再算最新的
+        if let d = try? Data(contentsOf: homeFile), let h = try? JSONDecoder().decode(HomeVM.self, from: d), h.date == Self.today {
+            home = h; accent = h.accent
+        }
         let args = ProcessInfo.processInfo.arguments
         if args.contains("-fpDemo") && !hasProfile { applyDemo() }
     }
@@ -65,8 +70,9 @@ final class AppModel {
         do {
             let r = try await engine.call(name, args, as: StateAndHome.self)
             adopt(r.S)
-            withAnimation(.snappy) { home = r.v }
+            withAnimation(Motion.quick) { home = r.v }
             accent = r.v.accent
+            if let d = try? JSONEncoder().encode(r.v) { try? d.write(to: homeFile) }
         } catch { say(error.localizedDescription) }
     }
 

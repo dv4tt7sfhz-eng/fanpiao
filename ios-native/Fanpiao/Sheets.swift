@@ -25,7 +25,7 @@ struct AddFoodSheet: View {
                         ForEach(hits) { h in
                             Button { pick = h } label: {
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text(h.n).font(.body.weight(.medium)).foregroundStyle(.primary)
+                                    Text(h.n).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
                                     Text("\(Fmt.n(h.k)) 千卡 · 蛋白 \(Fmt.one(h.p)) g · 碳水 \(Fmt.one(h.cb)) g · 脂肪 \(Fmt.one(h.f)) g")
                                         .font(.caption).foregroundStyle(Palette.ink2)
                                 }
@@ -40,7 +40,7 @@ struct AddFoodSheet: View {
                         } label: {
                             HStack {
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text(f.n).font(.body.weight(.medium)).foregroundStyle(.primary)
+                                    Text(f.n).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
                                     Text("每\(f.u)：\(Fmt.n(f.k)) 千卡 · 蛋白 \(Fmt.one(f.p)) g · ¥\(Fmt.yuan(f.price))")
                                         .font(.caption).foregroundStyle(Palette.ink2)
                                 }
@@ -80,11 +80,11 @@ struct GramSheet: View {
     var body: some View {
         let q = grams / 100
         VStack(alignment: .leading, spacing: 18) {
-            Text(hit.n).font(.title2.weight(.bold))
+            Text(hit.n).font(.title3.weight(.bold))
             GlassGroup(spacing: 8) {
                 HStack(spacing: 8) {
                     ForEach([50.0, 100, 150, 200, 300], id: \.self) { g in
-                        Button { withAnimation(.snappy) { grams = g } } label: {
+                        Button { withAnimation(Motion.quick) { grams = g } } label: {
                             Text("\(Fmt.n(g)) 克").font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 10)
                         }
                         .buttonStyle(.plain)
@@ -98,12 +98,12 @@ struct GramSheet: View {
                 Stat(v: Fmt.one(hit.cb * q) + " g", l: "碳水")
             }
             Text("脂肪 \(Fmt.one(hit.f * q)) g · 膳食纤维 \(Fmt.one(hit.fb * q)) g · 钠 \(Fmt.n(hit.na * q)) mg")
-                .font(.footnote).foregroundStyle(Palette.ink2)
+                .font(.caption).foregroundStyle(Palette.ink2)
             Toggle("已经吃了（直接打勾）", isOn: $ate)
             Button {
                 Task { await model.addLib(hit, grams: grams, slot: slot, done: ate); dismiss(); done() }
             } label: {
-                Text("记到\(slotName(slot))").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6)
+                Text("记到\(slotName(slot))").font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 6)
             }
             .glassProminentButton()
         }
@@ -115,7 +115,7 @@ struct Stat: View {
     let v: String; let l: String
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(v).font(.title3.weight(.bold)).contentTransition(.numericText())
+            Text(v).font(.title3.weight(.bold)).monospacedDigit().contentTransition(.numericText())
             Text(l).font(.caption).foregroundStyle(Palette.ink2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -138,7 +138,7 @@ struct PlansSheet: View {
                         if let cur = vm.plans.first(where: { $0.id == vm.cur }) {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("正在用").font(.caption).foregroundStyle(Palette.ink2)
-                                Text(cur.n).font(.title.weight(.bold))
+                                Text(cur.n).font(.title3.weight(.bold))
                                 Text(cur.d).font(.subheadline).foregroundStyle(Palette.ink2)
                                 RhythmStrip(days: vm.rhythm)
                             }
@@ -146,7 +146,7 @@ struct PlansSheet: View {
                             .glassCard(cornerRadius: 26, tint: Accent.of(model.accent).tint.opacity(0.18))
                         }
                         ForEach(groups(vm), id: \.self) { g in
-                            Text(g).font(.headline).padding(.top, 6)
+                            Text(g).font(.subheadline.weight(.semibold)).padding(.top, 6)
                             ForEach(vm.plans.filter { $0.g == g }) { p in
                                 PlanRow(p: p, current: p.id == vm.cur) {
                                     guard p.simple else { model.say("「\(p.n)」要填的东西多，下一版做到 iPhone 原生版里"); return }
@@ -175,11 +175,11 @@ struct PlanRow: View {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
-                        Text(p.n).font(.headline)
-                        if current { Text("生效中").font(.caption2.weight(.bold)).padding(.horizontal, 7).padding(.vertical, 3).background(Palette.good.opacity(0.2), in: Capsule()).foregroundStyle(Palette.good) }
+                        Text(p.n).font(.subheadline.weight(.semibold))
+                        if current { Text("生效中").font(.caption.weight(.bold)).padding(.horizontal, 7).padding(.vertical, 3).background(Palette.good.opacity(0.2), in: Capsule()).foregroundStyle(Palette.good) }
                     }
                     Text(p.tag).font(.caption.weight(.semibold)).foregroundStyle(.tint)
-                    Text(p.d).font(.footnote).foregroundStyle(Palette.ink2).multilineTextAlignment(.leading)
+                    Text(p.d).font(.caption).foregroundStyle(Palette.ink2).multilineTextAlignment(.leading)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").foregroundStyle(Palette.ink3)
@@ -228,7 +228,7 @@ struct DietDetailView: View {
             if let h = model.home {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        Text(Fmt.n(h.eaten.kcal)).font(.system(size: 64, weight: .bold, design: .rounded))
+                        Text(Fmt.n(h.eaten.kcal)).font(.system(size: 48, weight: .bold, design: .rounded))
                         Text("千卡").font(.title3.weight(.semibold)).foregroundStyle(Palette.ink2)
                     }
                     Text("目标 \(Fmt.n(h.T.kcal)) 千卡 · 还可以吃 \(Fmt.n(max(0, h.T.kcal - h.eaten.kcal)))").foregroundStyle(Palette.ink2)
@@ -248,7 +248,7 @@ struct DietDetailView: View {
                     ForEach(h.meals) { m in
                         HStack {
                             Image(systemName: slotIcon(m.slot)).foregroundStyle(accent.tint).frame(width: 26)
-                            Text(m.name).font(.headline)
+                            Text(m.name).font(.subheadline.weight(.semibold))
                             Spacer()
                             Text("\(Fmt.n(m.sum.kcal)) 千卡 · ¥\(Fmt.yuan(m.sum.cost))").foregroundStyle(Palette.ink2)
                         }
@@ -273,11 +273,11 @@ struct Ring: View {
             ZStack {
                 Circle().stroke(color.opacity(0.2), lineWidth: 8)
                 Circle().trim(from: 0, to: r).stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round)).rotationEffect(.degrees(-90))
-                Text("\(Fmt.n(r * 100))%").font(.footnote.weight(.bold))
+                Text("\(Fmt.n(r * 100))%").font(.caption.weight(.bold))
             }
             .frame(width: 62, height: 62)
             Text(name).font(.caption).foregroundStyle(Palette.ink2)
-            Text("\(Fmt.n(v)) / \(Fmt.n(t)) g").font(.caption2).foregroundStyle(Palette.ink3)
+            Text("\(Fmt.n(v)) / \(Fmt.n(t)) g").font(.caption).foregroundStyle(Palette.ink3)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
@@ -290,7 +290,7 @@ struct NaFb: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) { Circle().fill(color).frame(width: 8, height: 8); Text(title).font(.subheadline.weight(.semibold)) }
-            HStack(alignment: .firstTextBaseline, spacing: 3) { Text(Fmt.n(v)).font(.title.weight(.bold)); Text(unit).font(.caption).foregroundStyle(Palette.ink2) }
+            HStack(alignment: .firstTextBaseline, spacing: 3) { Text(Fmt.n(v)).font(.title3.weight(.bold)); Text(unit).font(.caption).foregroundStyle(Palette.ink2) }
             Text(sub).font(.caption).foregroundStyle(Palette.ink2)
             Text(ok ? "没问题" : (unit == "mg" ? "超了，少吃点咸的" : "还差一点，多吃蔬菜")).font(.caption.weight(.semibold)).foregroundStyle(ok ? Palette.good : Palette.warn)
         }

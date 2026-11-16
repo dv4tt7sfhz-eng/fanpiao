@@ -38,7 +38,7 @@ struct RootView: View {
                         Image(systemName: "ticket.fill")
                         Text("饭票")
                     }
-                    .font(.system(size: 44, weight: .heavy, design: .rounded))
+                    .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundStyle(accent.tint)
                 }
                 .transition(.opacity.combined(with: .scale(scale: 1.18)))
@@ -50,8 +50,8 @@ struct RootView: View {
             withAnimation(.easeInOut(duration: 0.45)) { splash = false }
         }
         .tint(accent.tint)
-        .animation(.snappy, value: model.toast)
-        .animation(.smooth, value: model.hasProfile)
+        .animation(Motion.quick, value: model.toast)
+        .animation(Motion.quick, value: model.hasProfile)
     }
 }
 

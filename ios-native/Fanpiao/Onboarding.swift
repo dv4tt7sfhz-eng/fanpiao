@@ -17,12 +17,12 @@ struct OnboardingView: View {
                 GlassGroup(spacing: 12) {
                     VStack(spacing: 12) {
                         Button { form = true } label: {
-                            Text("自己填（1 分钟）").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 8)
+                            Text("自己填（1 分钟）").font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 8)
                         }
                         .glassProminentButton()
                         Button { importing = true } label: {
                             VStack(spacing: 3) {
-                                Text("让 AI 帮你填").font(.headline)
+                                Text("让 AI 帮你填").font(.subheadline.weight(.semibold))
                                 Text("把说明发给任何 AI，再把它写的那段粘回来").font(.caption).foregroundStyle(Palette.ink2)
                             }
                             .frame(maxWidth: .infinity).padding(.vertical, 6)
@@ -63,7 +63,7 @@ struct ProfileForm: View {
                 }
                 Section("目标") {
                     Picker("", selection: $goal) { ForEach(g?.goals ?? [], id: \.id) { Text($0.n).tag($0.id) } }.pickerStyle(.segmented)
-                    if let d = g?.goals.first(where: { $0.id == goal })?.d { Text(d).font(.footnote).foregroundStyle(Palette.ink2) }
+                    if let d = g?.goals.first(where: { $0.id == goal })?.d { Text(d).font(.caption).foregroundStyle(Palette.ink2) }
                 }
                 Section("平时动得多不多") {
                     Picker("", selection: $activity) {
@@ -74,6 +74,7 @@ struct ProfileForm: View {
             }
             .scrollContentBackground(.hidden)
             .background(Backdrop(accent: Accent.of(model.accent)))
+            .interactiveDismissDisabled()
             .navigationTitle(isFirst ? "先认识一下你" : "身体资料")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -126,7 +127,7 @@ struct ImportSheet: View {
                     }
                     if let err { Note(icon: "xmark.octagon.fill", text: err, color: Palette.bad) }
                     if let pv {
-                        Text("导入后会这样改").font(.headline)
+                        Text("导入后会这样改").font(.subheadline.weight(.semibold))
                         VStack(spacing: 0) {
                             ForEach(Array(pv.rows.enumerated()), id: \.offset) { _, r in
                                 HStack(alignment: .top) {
@@ -143,13 +144,14 @@ struct ImportSheet: View {
                         if !pv.note.isEmpty { Note(icon: "sparkles", text: "AI 说：" + pv.note, color: Accent.of(model.accent).tint) }
                         Button {
                             Task { await model.importApply(pv); dismiss() }
-                        } label: { Text("确认导入").font(.headline).frame(maxWidth: .infinity).padding(.vertical, 6) }
+                        } label: { Text("确认导入").font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 6) }
                         .glassProminentButton()
                     }
                 }
                 .padding(16)
             }
             .background(Backdrop(accent: Accent.of(model.accent)))
+            .interactiveDismissDisabled(!text.isEmpty)
             .navigationTitle("让 AI 帮你填")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarLeading) { Button("取消") { dismiss() } } }
@@ -158,8 +160,8 @@ struct ImportSheet: View {
     private func check() {
         err = nil; pv = nil
         Task {
-            do { let r = try await model.importPreview(text); withAnimation(.snappy) { pv = r } }
-            catch { withAnimation(.snappy) { err = error.localizedDescription } }
+            do { let r = try await model.importPreview(text); withAnimation(Motion.quick) { pv = r } }
+            catch { withAnimation(Motion.quick) { err = error.localizedDescription } }
         }
     }
 }

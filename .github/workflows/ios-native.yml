@@ -72,7 +72,7 @@ jobs:
           rec() { n=$1; t=$2; shift 2; xcrun simctl terminate "$DEV" com.fanpiao.app >/dev/null 2>&1 || true; sleep 1
             xcrun simctl io "$DEV" recordVideo --codec=h264 --force "../shots/$n.mp4" & P=$!; sleep 1
             xcrun simctl launch "$DEV" com.fanpiao.app "$@" >/dev/null; sleep "$t"; kill -INT $P; wait $P || true; }
-          rec v-cycle 7 -fpDemo -fpNoSplash -fpShow cycle
+          rec v-cycle 10 -fpDemo -fpNoSplash -fpShow cycle
           rec v-splash 4 -fpDemo
           sleep 3
           xcrun simctl spawn "$DEV" log show --last 2m --style compact --predicate 'process == "Fanpiao"' 2>/dev/null | grep -iE "fatal|crash|error|exception|precondition" | tail -40 > ../shots/applog.txt || true

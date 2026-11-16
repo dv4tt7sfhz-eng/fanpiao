@@ -10,8 +10,8 @@ struct TodayView: View {
     @State private var open: Int?          // 展开成整页的是哪一面
     @State private var cardH: CGFloat = 320
     /// 和 2.1.0 录屏量出来的一样：0.46 秒长满，收的时候稍快
-    static let grow = Animation.spring(response: 0.46, dampingFraction: 0.86)
-    static let shrink = Animation.spring(response: 0.38, dampingFraction: 0.9)
+    static let grow = Motion.grow
+    static let shrink = Motion.shrink
 
     var body: some View {
         let accent = Accent.of(model.accent)
@@ -51,7 +51,7 @@ struct TodayView: View {
             .navigationTitle("今日")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Label("饭票", systemImage: "ticket").labelStyle(.titleAndIcon).font(.headline)
+                    Label("饭票", systemImage: "ticket").labelStyle(.titleAndIcon).font(.subheadline.weight(.semibold))
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     if let h = model.home {
@@ -70,6 +70,7 @@ struct TodayView: View {
             if let o = open, let h = model.home {
                 ExpandedPage(kind: o, h: h, accent: accent, ns: hero,
                              close: { withAnimation(Self.shrink) { open = nil } },
+                             dragClose: { v in withAnimation(Motion.release(velocity: v, distance: 500)) { open = nil } },
                              onPlans: { showPlans = true },
                              onAdd: { addSlot = suggestSlot() })
                     .zIndex(5)
@@ -99,6 +100,7 @@ struct TodayView: View {
         case "cycle":   // 录视频用：1.6 秒后展开，3.6 秒后收回
             face = 1
             Task {
+                while model.home == nil { try? await Task.sleep(for: .milliseconds(100)) }
                 try? await Task.sleep(for: .milliseconds(1600)); expand(1)
                 try? await Task.sleep(for: .milliseconds(2000)); withAnimation(Self.shrink) { open = nil }
             }
@@ -121,7 +123,7 @@ struct CoverCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Picker("", selection: $face.animation(.snappy)) {
+                Picker("", selection: $face.animation(Motion.quick)) {
                     Text("饮食").tag(0)
                     Text("计划").tag(1)
                 }
@@ -129,7 +131,7 @@ struct CoverCard: View {
                 .frame(width: 130)
                 Spacer()
                 Text(h.goalName)
-                    .font(.footnote.weight(.semibold))
+                    .font(.caption.weight(.semibold))
                     .padding(.horizontal, 12).padding(.vertical, 6)
                     .glassCapsule(interactive: false)
             }
@@ -151,12 +153,12 @@ struct CoverCard: View {
         let ratio = h.T.kcal > 0 ? min(1, h.eaten.kcal / h.T.kcal) : 0
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(Fmt.n(h.eaten.kcal)).font(.system(size: 52, weight: .bold, design: .rounded)).contentTransition(.numericText())
+                Text(Fmt.n(h.eaten.kcal)).font(.system(size: 48, weight: .bold, design: .rounded)).monospacedDigit().contentTransition(.numericText())
                     .matchedGeometryEffect(id: "num", in: ns)
                 Text("/ \(Fmt.n(h.T.kcal)) 千卡").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.ink2)
             }
             Text(h.eaten.kcal > 0 ? "已经吃了 \(Fmt.n(ratio * 100))%" : "还没打勾，吃完一样点一下")
-                .font(.footnote).foregroundStyle(Palette.ink2)
+                .font(.caption).foregroundStyle(Palette.ink2)
             ProgressBar(value: ratio, tint: accent)
             HStack(spacing: 0) {
                 Macro(name: "蛋白质", eaten: h.eaten.p, target: h.T.protein, color: Palette.protein)
@@ -170,9 +172,9 @@ struct CoverCard: View {
 
     private var planFace: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(h.kindName.isEmpty ? h.planName : h.kindName).font(.system(size: 40, weight: .heavy, design: .rounded))
+            Text(h.kindName.isEmpty ? h.planName : h.kindName).font(.system(size: 48, weight: .bold, design: .rounded))
                 .matchedGeometryEffect(id: "title", in: ns, anchor: .topLeading)
-            Text(h.label.isEmpty ? h.planTag : h.label).font(.footnote).foregroundStyle(Palette.ink2)
+            Text(h.label.isEmpty ? h.planTag : h.label).font(.caption).foregroundStyle(Palette.ink2)
             Text("今天 \(Fmt.n(h.T.kcal)) 千卡 · 蛋白 \(Fmt.n(h.T.protein)) g · 碳水 \(Fmt.n(h.T.carb)) g")
                 .font(.subheadline.weight(.medium))
             HStack {
@@ -194,7 +196,7 @@ struct Macro: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 5) { Circle().fill(color).frame(width: 6, height: 6); Text(name).font(.caption).foregroundStyle(Palette.ink2) }
             HStack(alignment: .firstTextBaseline, spacing: 2) {
-                Text(Fmt.n(eaten)).font(.title3.weight(.bold)).contentTransition(.numericText())
+                Text(Fmt.n(eaten)).font(.title3.weight(.bold)).monospacedDigit().contentTransition(.numericText())
                 Text("/ \(Fmt.n(target)) g").font(.caption).foregroundStyle(Palette.ink3)
             }
         }
@@ -215,7 +217,7 @@ struct ProgressBar: View {
             }
         }
         .frame(height: 10)
-        .animation(.smooth, value: value)
+        .animation(Motion.quick, value: value)
     }
 }
 
@@ -237,12 +239,12 @@ struct QuickRow: View {
         Button(action: act) {
             VStack(spacing: 6) {
                 Image(systemName: icon).font(.title3.weight(.semibold))
-                Text(t).font(.footnote.weight(.semibold))
+                Text(t).font(.caption.weight(.semibold))
             }
             .frame(maxWidth: .infinity).padding(.vertical, 14)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScale())
         .glassCard(cornerRadius: 22, interactive: true)
     }
 }
@@ -251,9 +253,9 @@ struct SectionTitle: View {
     let text: String; var trailing: String = ""
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(text).font(.title2.weight(.bold))
+            Text(text).font(.title3.weight(.bold))
             Spacer()
-            Text(trailing).font(.footnote).foregroundStyle(Palette.ink2)
+            Text(trailing).font(.caption).foregroundStyle(Palette.ink2)
         }
         .padding(.top, 8)
     }
@@ -285,7 +287,7 @@ struct MealCard: View {
             HStack(spacing: 12) {
                 Image(systemName: slotIcon(meal.slot)).font(.title3).foregroundStyle(accent.tint).frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(meal.name).font(.headline)
+                    Text(meal.name).font(.subheadline.weight(.semibold))
                     Text("\(Fmt.n(meal.sum.kcal)) 千卡 · 蛋白 \(Fmt.n(meal.sum.p)) g").font(.caption).foregroundStyle(Palette.ink2)
                 }
                 Spacer()
@@ -295,8 +297,8 @@ struct MealCard: View {
                         Button("不开火") { Task { await model.setMode(meal.slot, "cold") } }
                         Button("自己做") { Task { await model.setMode(meal.slot, "cook") } }
                     } label: {
-                        HStack(spacing: 4) { Text(meal.mode); Image(systemName: "chevron.down").font(.caption2) }
-                            .font(.footnote.weight(.semibold)).padding(.horizontal, 12).padding(.vertical, 7)
+                        HStack(spacing: 4) { Text(meal.mode); Image(systemName: "chevron.down").font(.caption) }
+                            .font(.caption.weight(.semibold)).padding(.horizontal, 12).padding(.vertical, 7)
                     }
                     .glassCapsule()
                 }
@@ -340,20 +342,22 @@ struct ItemRow: View {
         HStack(spacing: 12) {
             Button(action: onToggle) {
                 Image(systemName: item.done ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundStyle(item.done ? accent.tint : Palette.ink3)
                     .symbolEffect(.bounce, value: item.done)
                     .contentTransition(.symbolEffect(.replace))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScale(scale: 0.85))
             VStack(alignment: .leading, spacing: 2) {
-                Text(item.n).font(.body.weight(.medium)).strikethrough(item.done, color: Palette.ink3)
+                Text(item.n).font(.subheadline.weight(.medium)).strikethrough(item.done, color: Palette.ink3)
                     .foregroundStyle(item.done ? Palette.ink3 : .primary)
                 Text("\(item.qtyText) × \(item.u)").font(.caption).foregroundStyle(Palette.ink3)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                (Text(Fmt.n(item.kcal)).font(.body.weight(.bold)) + Text(" 千卡").font(.caption2).foregroundColor(Palette.ink2))
+                (Text(Fmt.n(item.kcal)).font(.subheadline.weight(.bold)) + Text(" 千卡").font(.caption).foregroundColor(Palette.ink2))
                 Text("蛋白 \(Fmt.one(item.p)) g · ¥\(Fmt.yuan(item.cost))").font(.caption).foregroundStyle(Palette.ink3)
             }
         }
