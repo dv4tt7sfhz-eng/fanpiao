@@ -3,21 +3,30 @@ import SwiftUI
 /// 今天：封面卡（饮食 / 计划两面）+ 快捷按钮 + 今天吃什么
 struct TodayView: View {
     @Environment(AppModel.self) private var model
-    @Namespace private var zoom
+    @Namespace private var hero
     @State private var face = 0            // 0 饮食，1 计划
     @State private var addSlot: String?
     @State private var showPlans = false
-    @State private var showDetail = false
+    @State private var open: Int?          // 展开成整页的是哪一面
+    @State private var cardH: CGFloat = 320
+    /// 和 2.1.0 录屏量出来的一样：0.46 秒长满，收的时候稍快
+    static let grow = Animation.spring(response: 0.46, dampingFraction: 0.86)
+    static let shrink = Animation.spring(response: 0.38, dampingFraction: 0.9)
 
     var body: some View {
         let accent = Accent.of(model.accent)
+        ZStack {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 18) {
                     if let h = model.home {
-                        CoverCard(h: h, face: $face, accent: accent, onPlans: { showPlans = true })
-                            .matchedTransitionSource(id: "cover", in: zoom)
-                            .onTapGesture { showDetail = true }
+                        if open == nil {
+                            CoverCard(h: h, face: $face, accent: accent, ns: hero, onPlans: { expand(1) })
+                                .onTapGesture { expand(face) }
+                                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardH = $0 }
+                        } else {
+                            Color.clear.frame(height: cardH)
+                        }
                         QuickRow(onAdd: { addSlot = suggestSlot() }, onReplan: { Task { await model.replan() } }, onPlans: { showPlans = true })
                         SectionTitle(text: "今天吃什么", trailing: h.label.isEmpty ? h.planName : h.label)
                         if h.issues.isEmpty {
@@ -50,16 +59,28 @@ struct TodayView: View {
                     }
                 }
             }
-            .navigationDestination(isPresented: $showDetail) {
-                DietDetailView().navigationTransition(.zoom(sourceID: "cover", in: zoom))
-            }
+            .toolbar(open == nil ? .visible : .hidden, for: .tabBar)
             .sheet(item: Binding(get: { addSlot.map { SlotBox(slot: $0) } }, set: { addSlot = $0?.slot })) { box in
                 AddFoodSheet(slot: box.slot).presentationDetents([.medium, .large])
             }
             .sheet(isPresented: $showPlans) { PlansSheet().presentationDetents([.large]) }
             .refreshable { await model.refresh() }
         }
+            // 卡片长成的整页：卡片、大标题、按钮各自从原来的位置连续变过去
+            if let o = open, let h = model.home {
+                ExpandedPage(kind: o, h: h, accent: accent, ns: hero,
+                             close: { withAnimation(Self.shrink) { open = nil } },
+                             onPlans: { showPlans = true },
+                             onAdd: { addSlot = suggestSlot() })
+                    .zIndex(5)
+            }
+        }
         .task { if model.home == nil { await model.refresh() } ; openFromArgs() }
+    }
+
+    private func expand(_ which: Int) {
+        if which != face { face = which }
+        withAnimation(Self.grow) { open = which }
     }
 
     private func suggestSlot() -> String {
@@ -73,7 +94,14 @@ struct TodayView: View {
         switch a[i + 1] {
         case "add": addSlot = "l"
         case "plans": showPlans = true
-        case "detail": showDetail = true
+        case "detail": open = 0
+        case "planpage": face = 1; open = 1
+        case "cycle":   // 录视频用：1.6 秒后展开，3.6 秒后收回
+            face = 1
+            Task {
+                try? await Task.sleep(for: .milliseconds(1600)); expand(1)
+                try? await Task.sleep(for: .milliseconds(2000)); withAnimation(Self.shrink) { open = nil }
+            }
         case "plan": face = 1
         default: break
         }
@@ -87,6 +115,7 @@ struct CoverCard: View {
     let h: HomeVM
     @Binding var face: Int
     let accent: Accent
+    var ns: Namespace.ID
     var onPlans: () -> Void
 
     var body: some View {
@@ -115,6 +144,7 @@ struct CoverCard: View {
                 .allowsHitTesting(false)
         }
         .glassCard(cornerRadius: 30, tint: accent.tint.opacity(face == 0 ? 0.12 : 0.3))
+        .matchedGeometryEffect(id: "card", in: ns)
     }
 
     private var dietFace: some View {
@@ -122,6 +152,7 @@ struct CoverCard: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(Fmt.n(h.eaten.kcal)).font(.system(size: 52, weight: .bold, design: .rounded)).contentTransition(.numericText())
+                    .matchedGeometryEffect(id: "num", in: ns)
                 Text("/ \(Fmt.n(h.T.kcal)) 千卡").font(.subheadline.weight(.semibold)).foregroundStyle(Palette.ink2)
             }
             Text(h.eaten.kcal > 0 ? "已经吃了 \(Fmt.n(ratio * 100))%" : "还没打勾，吃完一样点一下")
@@ -140,15 +171,17 @@ struct CoverCard: View {
     private var planFace: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(h.kindName.isEmpty ? h.planName : h.kindName).font(.system(size: 40, weight: .heavy, design: .rounded))
+                .matchedGeometryEffect(id: "title", in: ns, anchor: .topLeading)
             Text(h.label.isEmpty ? h.planTag : h.label).font(.footnote).foregroundStyle(Palette.ink2)
             Text("今天 \(Fmt.n(h.T.kcal)) 千卡 · 蛋白 \(Fmt.n(h.T.protein)) g · 碳水 \(Fmt.n(h.T.carb)) g")
                 .font(.subheadline.weight(.medium))
             HStack {
                 Spacer()
                 Button(action: onPlans) {
-                    Label("安排计划", systemImage: "arrow.right").labelStyle(.titleAndIcon).font(.subheadline.weight(.semibold))
+                    CtaPill(wide: false, accent: accent)
                 }
-                .glassProminentButton()
+                .buttonStyle(.plain)
+                .matchedGeometryEffect(id: "cta", in: ns)
             }
             .padding(.top, 6)
         }

@@ -14,6 +14,7 @@ struct FanpiaoApp: App {
 
 struct RootView: View {
     @Environment(AppModel.self) private var model
+    @State private var splash = !ProcessInfo.processInfo.arguments.contains("-fpNoSplash")
     var body: some View {
         let accent = Accent.of(model.accent)
         ZStack(alignment: .top) {
@@ -27,6 +28,26 @@ struct RootView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .zIndex(10)
             }
+        }
+        .overlay {
+            // 开场：黑底上的饭票标志，放大一点再淡出，露出首页
+            if splash {
+                ZStack {
+                    Color.black.ignoresSafeArea()
+                    HStack(spacing: 12) {
+                        Image(systemName: "ticket.fill")
+                        Text("饭票")
+                    }
+                    .font(.system(size: 44, weight: .heavy, design: .rounded))
+                    .foregroundStyle(accent.tint)
+                }
+                .transition(.opacity.combined(with: .scale(scale: 1.18)))
+                .zIndex(20)
+            }
+        }
+        .task {
+            try? await Task.sleep(for: .milliseconds(850))
+            withAnimation(.easeInOut(duration: 0.45)) { splash = false }
         }
         .tint(accent.tint)
         .animation(.snappy, value: model.toast)
