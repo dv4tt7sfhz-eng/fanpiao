@@ -383,7 +383,7 @@ export function RankSheet({ onClose }) {
 }
 
 // ---------- 主题色（对应 Norg 的主题市场） ----------
-export const ACCENTS = [["", "焰", "#ff3b4e", "炭火上跳的红"], ["sea", "海", "#4ea1ff", "深海里透上来的蓝"], ["berry", "莓", "#ff5c7a", "熟透的树莓"], ["pine", "松", "#2fd6a0", "雨后的松针"], ["iris", "藤", "#9b85ff", "傍晚的紫藤"], ["persimmon", "柿", "#ff9a3c", "挂在枝头的柿子"]];
+export const ACCENTS = [["", "暮", "#d0928f", "傍晚天边的灰粉"], ["sea", "雾", "#8dadd7", "清晨湖面的雾蓝"], ["berry", "玫", "#c58ba1", "压干的玫瑰"], ["pine", "苔", "#8db69f", "石头上的青苔"], ["iris", "藤", "#ab9bcb", "褪了色的紫藤"], ["persimmon", "沙", "#caab88", "午后的沙色"]];
 export function setAccent(id, at) {
   const go = () => commit((S) => { S.prefs.accent = id; });
   const root = document.documentElement;

@@ -7,7 +7,7 @@ import { PROVIDERS, providerOf, chatJSON, hasPreviewAI, aiReady } from "./ai.js"
 import { cloud, exportable } from "./api.js";
 import { blank, wipe, save } from "./store.js";
 
-export const VERSION = "2.2.0";
+export const VERSION = "2.3.0";
 
 export function Me() {
   const S = app.S, p = S.profile, T = targetsOf(p);

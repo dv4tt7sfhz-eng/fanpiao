@@ -3027,3 +3027,110 @@ body::after{opacity:.06}   /* 颗粒加一点：大片的暗渐变在手机屏�
 .hero-bowl{filter:drop-shadow(8px 16px 18px color-mix(in srgb,var(--tint-deep) 78%,transparent))}
 /* 小标题前的圆点：一粒发光的珠子 */
 .sech .dot{background:radial-gradient(circle at 34% 30%,var(--tint-hi),var(--tint) 60%,var(--tint-lo))}
+
+/* ===================================================================================
+   2.3.0 调色：雾面玻璃（苹果风低饱和）
+   ① 颜色：所有颜色的鲜艳度压到 OKLCH C≈0.06~0.08，像 iOS 的系统色被雾蒙了一层。
+   ② 材质只有一种：iOS 磨砂玻璃——半透明，边上一根发丝细的亮线（0.5px），不再用左上 / 右下两道彩色亮边。
+   ③ 底：纯黑，背后一层很淡的主题色和灰蓝柔光。
+   ④ 字：苹果的三级字色（#f5f5f7 / 62% / 34%）。
+   ④ 封面「计划」面：不再是一整块实色，而是一块透着主题色的玻璃，白字永远看得清。
+   =================================================================================== */
+:root,:root[data-theme="dark"]{
+  --lf-base:#000;--bg:#000;--bg-up:#1c1c1e;--card:#1c1c1e;--card-up:#2c2c2e;
+  --ink:#f5f5f7;--ink2:rgba(235,235,245,.62);--ink3:rgba(235,235,245,.34);--sep:rgba(255,255,255,.08);
+  --fill:rgba(118,118,128,.2);--fill2:rgba(118,118,128,.32);--shade:rgba(0,0,0,.5);
+  --lf:radial-gradient(90% 50% at 0% -6%,rgb(var(--lf-a) / .4),transparent 64%),radial-gradient(80% 50% at 110% 30%,rgb(var(--lf-b) / .45),transparent 66%),radial-gradient(90% 40% at -10% 104%,rgb(var(--lf-c) / .25),transparent 62%),linear-gradient(180deg,#0c0c0f,#000 62%);
+  --gl-1:linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.045));
+  --gl-1-rim:inset 0 0 0 .5px rgba(255,255,255,.16),inset 0 1px 0 rgba(255,255,255,.1);
+  --gl-1-drop:0 12px 30px -18px rgba(0,0,0,.8);
+  --gl-2:rgba(255,255,255,.1);--gl-2-rim:inset 0 0 0 .5px rgba(255,255,255,.16);
+  --well:rgba(118,118,128,.18);--well-rim:inset 0 0 0 .5px rgba(255,255,255,.05);
+  --gl-3:rgba(40,40,44,.62);--gl-3-rim:inset 0 0 0 .5px rgba(255,255,255,.18),inset 0 1px 0 rgba(255,255,255,.1);--gl-3-drop:0 10px 30px -10px rgba(0,0,0,.6);
+  --gl-blur:blur(30px) saturate(160%);
+  --gl-tint:linear-gradient(180deg,color-mix(in oklab,var(--tint-hi) 40%,var(--tint)),var(--tint));
+  --gl-tint-rim:inset 0 0 0 .5px rgba(255,255,255,.22),inset 0 1px 0 rgba(255,255,255,.25);
+  --gl-tint-drop:0 8px 20px -10px var(--tint-glow);
+  --k-h:#e5afa5;--k-h-soft:rgba(229,175,165,.13);--k-m:#d4ba8e;--k-m-soft:rgba(212,186,142,.13);--k-l:#8bcbcb;--k-l-soft:rgba(139,203,203,.13);--c-p:#acc89e;--c-cb:#95c5e2;--c-fat:#cfbc8e;--na:#b1bbe8;--fb:#a1caa8;--green:#94cea7;--green-soft:rgba(148,206,167,.13);--amber:#d1bb8e;--amber-soft:rgba(209,187,142,.13);--bad:#e5aea9;--bad-soft:rgba(229,174,169,.13);--green-ink:#b0debf;--c-b:#cca17c;--c-b-soft:rgba(204,161,124,.14);--c-b-ink:#e7c3a4;--c-l:#73bab5;--c-l-soft:rgba(115,186,181,.14);--c-l-ink:#9fd7d3;--c-d:#9da8d9;--c-d-soft:rgba(157,168,217,.14);--c-d-ink:#bfc8f1;--c-s:#d098ad;--c-s-soft:rgba(208,152,173,.14);--c-s-ink:#ebbbcc;--kg-h:linear-gradient(to top,#6a3f3f,#bc8177 55%,#f6cdbf);--kg-m:linear-gradient(to top,#624727,#aa8d5c 55%,#e4d7b3);--kg-l:linear-gradient(to top,#1b575a,#569fac 55%,#b4e0ef);
+}
+:root:not([data-accent]){--tint:#d0928f;--tint-hi:#e8b7aa;--tint-lo:#8b5860;--tint-deep:#301b1f;--tint-ink:#f2c4c2;--tint-soft:rgba(208,146,143,.14);--tint-glow:rgba(208,146,143,.32);--lf-a:126 88 86;--lf-b:70 87 108;--lf-c:111 97 81}  /* 暮 */
+:root[data-accent="sea"]{--tint:#8dadd7;--tint-hi:#bbcaf0;--tint-lo:#4e7391;--tint-deep:#13242f;--tint-ink:#bcd3f1;--tint-soft:rgba(141,173,215,.14);--tint-glow:rgba(141,173,215,.32);--lf-a:80 101 128;--lf-b:88 80 105;--lf-c:80 104 109}  /* 雾 */
+:root[data-accent="berry"]{--tint:#c58ba1;--tint-hi:#e1aeb6;--tint-lo:#7e546d;--tint-deep:#2d1b27;--tint-ink:#eec3d3;--tint-soft:rgba(197,139,161,.14);--tint-glow:rgba(197,139,161,.32);--lf-a:123 88 101;--lf-b:81 83 108;--lf-c:115 94 86}  /* 玫 */
+:root[data-accent="pine"]{--tint:#8db69f;--tint-hi:#aed4c8;--tint-lo:#5b775f;--tint-deep:#1a251a;--tint-ink:#bcd9c8;--tint-soft:rgba(141,182,159,.14);--tint-glow:rgba(141,182,159,.32);--lf-a:74 108 89;--lf-b:63 89 105;--lf-c:104 99 80}  /* 苔 */
+:root[data-accent="iris"]{--tint:#ab9bcb;--tint-hi:#d2bade;--tint-lo:#67638c;--tint-deep:#202030;--tint-ink:#d5caed;--tint-soft:rgba(171,155,203,.14);--tint-glow:rgba(171,155,203,.32);--lf-a:103 93 124;--lf-b:68 87 107;--lf-c:116 93 92}  /* 藤 */
+:root[data-accent="persimmon"]{--tint:#caab88;--tint-hi:#e0cfae;--tint-lo:#8d6d55;--tint-deep:#2c1e15;--tint-ink:#e3cdb4;--tint-soft:rgba(202,171,136,.14);--tint-glow:rgba(202,171,136,.32);--lf-a:118 94 68;--lf-b:72 86 108;--lf-c:115 93 89}  /* 沙 */
+html{background:#000}
+body::after{opacity:.035}
+/* 封面「计划」面：一块透着主题色的玻璃 */
+.cv-red,.dp-red{background:linear-gradient(118deg,transparent 30%,rgba(255,255,255,.07) 42%,transparent 56%),
+  radial-gradient(130% 110% at 0% 0%,color-mix(in oklab,var(--tint-hi) 70%,transparent) 0%,color-mix(in oklab,var(--tint) 62%,transparent) 30%,color-mix(in oklab,var(--tint-lo) 58%,transparent) 70%,color-mix(in oklab,var(--tint-deep) 80%,#0a0a0c) 112%),#121214}
+.cv-glow{opacity:.55}
+.cover::after{background:linear-gradient(180deg,rgba(255,255,255,.34),rgba(255,255,255,.08) 30%,rgba(255,255,255,.05) 70%,rgba(255,255,255,.14))}
+.cover::before{opacity:.3}
+/* 主按钮、选中：平的主题色，不发光 */
+.btn.primary{background:var(--gl-tint)!important;box-shadow:var(--gl-tint-rim),var(--gl-tint-drop)!important;color:#fff;text-shadow:none}
+.fp-go,.cv-cta i,.fab.shut .fp-go,.fab.shut .fpill.glass .fp-go,.dock .dk.mid .ic,.avatar,.tprev .sw{background:var(--gl-tint)}
+.fp-go,.cv-cta i{box-shadow:var(--gl-tint-rim)}
+.avatar{box-shadow:var(--gl-tint-rim),0 0 0 5px rgba(255,255,255,.06),0 0 0 6px rgba(255,255,255,.1)}
+.tabs .thumb .pill{background:rgba(255,255,255,.12)!important;box-shadow:inset 0 0 0 .5px rgba(255,255,255,.18)!important}
+.tabs button[aria-current="page"] svg{stroke:var(--tint-ink);filter:none}
+.tabs .in{box-shadow:var(--gl-3-rim),0 20px 40px -16px rgba(0,0,0,.8)!important}
+.tabs .in,.tabs .lgwarp{background:rgba(36,36,40,.66)!important}
+.fpill::before{background:rgba(40,40,44,.82) padding-box,linear-gradient(rgba(255,255,255,.2),rgba(255,255,255,.08)) border-box;box-shadow:0 14px 30px -14px #000}
+.logbar.one .cv-cta.wide{background:rgba(40,40,44,.8);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2)}
+/* 提示条、开关、小图标：全部跟着低饱和的记号走 */
+.note.ok,.tmeals .note.ok{background:linear-gradient(165deg,color-mix(in srgb,var(--green) 15%,transparent),color-mix(in srgb,var(--green) 5%,transparent))!important;box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--green) 26%,transparent)!important;color:var(--green-ink)}
+.note.ok svg{background:var(--green)!important;stroke:#0e2016!important;box-shadow:none!important}
+.note.warn{background:color-mix(in srgb,var(--amber) 13%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--amber) 26%,transparent);color:var(--amber)}
+.note.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--bad) 28%,transparent);color:var(--bad)}
+.tag.warn,.tag.na,.nfmini .hi{box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--amber) 30%,transparent)}
+.na-over .nfm.na{background:color-mix(in srgb,var(--amber) 14%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--amber) 26%,transparent)}
+.fb-ok .nfm.fb{background:color-mix(in srgb,var(--fb) 13%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--fb) 24%,transparent)}
+.nfm.na .ico{background:var(--na)}.nfm.fb .ico{background:var(--fb)}
+.nfm .ico,.nav .ic,.snapcta .ic{box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2)}
+.switch input:checked,.tog[aria-pressed="true"]{background:var(--green);box-shadow:none}
+.switch input::after,.tog::after{background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.sdots i.on{background:var(--k-h);box-shadow:none}
+.leafbar i{background:linear-gradient(to top,color-mix(in oklab,var(--fb) 50%,#000),var(--fb))}
+.rmx{background:var(--bad);box-shadow:0 4px 10px rgba(0,0,0,.4)}
+.flame svg{fill:var(--c-b);filter:none}
+.streak svg{fill:var(--c-b)}
+.cbar i,.xpbar i,.cv-bar .trk i{background:linear-gradient(90deg,var(--tint-lo),var(--tint) 60%,var(--tint-hi));box-shadow:none}
+.cv-bar .trk{background:rgba(118,118,128,.24);box-shadow:none}
+.logo,.bigt,.dayttl h1,.daypager h1{background:none;color:var(--ink);-webkit-background-clip:border-box;background-clip:border-box}
+.wcard .wv,.pstats b{background:none;color:var(--ink);-webkit-background-clip:border-box;background-clip:border-box}
+.chip[aria-pressed="true"],.utabs:not(.line) button[aria-pressed="true"],.rail button[aria-pressed="true"]{background:var(--tint);box-shadow:none;color:#fff}
+.opt[aria-pressed="true"]{background:color-mix(in srgb,var(--tint) 18%,transparent);box-shadow:inset 0 0 0 1.5px var(--tint)}
+.pill2.ai,.slotpick,.frow i{background:color-mix(in srgb,var(--tint) 20%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--tint) 40%,transparent);color:var(--tint-ink)}
+.plancard[aria-pressed="true"]{box-shadow:var(--gl-1-rim),0 0 0 1.5px var(--tint)}
+.calsel i,.hseg .th{background:#fff;box-shadow:0 6px 16px -6px rgba(0,0,0,.6)}
+.wd.now{background:color-mix(in srgb,var(--tint) 14%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,var(--tint) 40%,transparent)}
+.wd.now b{background:var(--tint);box-shadow:none}
+.field input:focus,.field select:focus,.field textarea:focus,.inp:focus,.cdw .inp:focus{box-shadow:var(--well-rim),0 0 0 1.5px var(--tint)}
+.seg .thumb,.kseg button:not([class])[aria-pressed="true"]{background:rgba(118,118,128,.42);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.12),0 3px 8px rgba(0,0,0,.4)}
+.sheet{background:linear-gradient(180deg,rgba(44,44,48,.9),rgba(28,28,30,.96) 30%,#1c1c1e)!important;box-shadow:inset 0 .5px 0 rgba(255,255,255,.22),0 -20px 60px rgba(0,0,0,.6)!important}
+.sheet.logsheet,.sheet.favsheet{background:radial-gradient(120% 50% at 50% 120%,color-mix(in srgb,var(--tint) 34%,transparent),transparent 70%),linear-gradient(180deg,rgba(44,44,48,.9),rgba(28,28,30,.96) 30%,#1c1c1e)!important}
+.mehero{background:linear-gradient(180deg,color-mix(in srgb,var(--tint) 16%,transparent),transparent 88%)}
+.mh-bg .l2{background:rgb(var(--lf-b))}
+.tcv{box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2),0 14px 26px -18px #000}
+.tcard[aria-pressed="true"] .tcv{box-shadow:inset 0 0 0 .5px rgba(255,255,255,.3),0 0 0 2px var(--c)}
+/* 2.3.0：把旧样式里剩下的彩虹和高饱和色也压下来 */
+.sky-dawn,.sky-dusk{background:linear-gradient(168deg,color-mix(in oklab,var(--tint-deep) 80%,#000) 0%,color-mix(in oklab,var(--tint-lo) 70%,#1c1c1e) 50%,color-mix(in oklab,var(--tint) 80%,#2c2c2e) 100%);--glow:rgba(0,0,0,.5);--b1:var(--tint-hi);--b2:var(--tint)}
+.sky-day{background:linear-gradient(168deg,#1d2633 0%,#3c4e66 58%,#6f86a3 100%);--glow:rgba(0,0,0,.5);--b1:#c8d6e8;--b2:#8dadd7}
+.sky-night{background:linear-gradient(168deg,#05060a 0%,#141823 58%,#262d3d 100%);--glow:rgba(0,0,0,.5);--b1:#8a96b8;--b2:#a99bc8}
+.snapcta,.note.ai{background:linear-gradient(var(--card),var(--card)) padding-box,linear-gradient(110deg,rgba(255,255,255,.22),color-mix(in srgb,var(--tint) 60%,transparent),rgba(255,255,255,.1),color-mix(in srgb,var(--c-cb) 50%,transparent),rgba(255,255,255,.22)) border-box;background-size:auto,300% 100%;--card:rgba(30,30,33,.92)}
+.snapcta.pack{background:linear-gradient(var(--card),var(--card)) padding-box,linear-gradient(110deg,rgba(255,255,255,.2),color-mix(in srgb,var(--green) 55%,transparent),rgba(255,255,255,.1),rgba(255,255,255,.2)) border-box;background-size:auto,300% 100%}
+.snapcta .ic,.lens span{background:linear-gradient(150deg,var(--tint-hi),var(--tint) 55%,var(--tint-lo));box-shadow:inset 0 0 0 .5px rgba(255,255,255,.22)}
+.snapcta .ic::after{border-color:color-mix(in srgb,var(--tint) 40%,transparent)}
+.snapcta.pack .ic{background:linear-gradient(150deg,color-mix(in oklab,var(--green) 70%,#fff),var(--green) 55%,color-mix(in oklab,var(--green) 60%,#000))}
+.snapcta.pack .ic::after{border-color:color-mix(in srgb,var(--green) 40%,transparent)}
+.snapcta::before{background:linear-gradient(100deg,transparent,rgba(255,255,255,.18),transparent)}
+.aibusy::before{background:conic-gradient(from 0deg,var(--tint),var(--c-cb),var(--c-fat),var(--tint))}
+.note.ai b{color:var(--tint-ink)}
+.tabs .bubble::before,.hero.cov .knob::before{background:linear-gradient(160deg,rgba(255,255,255,.7),rgba(255,255,255,.12) 45%,rgba(255,255,255,.4))}
+/* 「我的」页设置图标：跟 iOS 设置一样一格一个颜色，但都是低饱和的 */
+.nav .ic.i-plan{background:var(--c-b)}.nav .ic.i-ai{background:var(--c-d)}.nav .ic.i-fill{background:var(--tint)}
+.nav .ic.i-cloud{background:var(--c-cb)}.nav .ic.i-data{background:#6e6e73}.nav .ic.i-about{background:var(--green)}
+/* 钠 / 纤维的仪表盘渐变 */
+#g-na stop:nth-child(1){stop-color:var(--c-cb)}#g-na stop:nth-child(2){stop-color:var(--na)}#g-na stop:nth-child(3){stop-color:var(--amber)}
+#g-fb stop:nth-child(1){stop-color:color-mix(in oklab,var(--fb) 60%,#fff)}#g-fb stop:nth-child(2){stop-color:var(--fb)}
