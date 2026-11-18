@@ -58,18 +58,24 @@ jobs:
           xcrun simctl install "$DEV" simbuild/Build/Products/Debug-iphonesimulator/Fanpiao.app
           mkdir -p ../shots
           shot() { n=$1; shift; xcrun simctl terminate "$DEV" com.fanpiao.app >/dev/null 2>&1 || true; xcrun simctl launch "$DEV" com.fanpiao.app "$@" >/dev/null; sleep 7; xcrun simctl io "$DEV" screenshot "../shots/$n.png" >/dev/null; }
-          shot 1-today -fpNoSplash -fpTab 0
+          shot 0-welcome -fpNoSplash -fpTab 0
+          shot 1-today -fpNoSplash -fpTab 0 -fpDemo
           shot 2-diet -fpNoSplash -fpTab 0 -fpMode diet
           shot 3-sheet -fpNoSplash -fpTab 0 -fpShow sheet
+          shot 3b-dietpage -fpNoSplash -fpTab 0 -fpShow diet
           shot 4-plan -fpNoSplash -fpTab 1
           shot 5-find -fpNoSplash -fpTab 2
           shot 6-me -fpNoSplash -fpTab 3
+          shot 7-foods -fpNoSplash -fpTab 0 -fpRoute foods
+          shot 8-school -fpNoSplash -fpTab 0 -fpRoute school
+          shot 9-level -fpNoSplash -fpTab 0 -fpRoute level
+          shot 10-ai -fpNoSplash -fpTab 0 -fpRoute ai
           # 录两段视频看动画：开场；排餐/饮食来回切换 + 卡片长成整页再收回
           rec() { n=$1; t=$2; shift 2; xcrun simctl terminate "$DEV" com.fanpiao.app >/dev/null 2>&1 || true; sleep 1
             xcrun simctl io "$DEV" recordVideo --codec=h264 --force "../shots/$n.mp4" & P=$!; sleep 1
             xcrun simctl launch "$DEV" com.fanpiao.app "$@" >/dev/null; sleep "$t"; kill -INT $P; wait $P || true; }
           rec v-boot 4
-          rec v-auto 10 -fpNoSplash -fpAutoplay
+          rec v-auto 14 -fpNoSplash -fpAutoplay
           sleep 3
           xcrun simctl spawn "$DEV" log show --last 2m --style compact --predicate 'process == "Fanpiao"' 2>/dev/null | grep -iE "fatal|crash|error|exception|precondition" | tail -40 > ../shots/applog.txt || true
           cp ~/Library/Logs/DiagnosticReports/Fanpiao* ../shots/ 2>/dev/null || true

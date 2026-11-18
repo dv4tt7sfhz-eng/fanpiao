@@ -65,14 +65,14 @@ final class LinkProxy: NSObject {
 final class TodayMotion {
     enum Mode { case train, diet }
 
-    var mode: Mode = LaunchArgs.value("-fpMode") == "diet" ? .diet : .train
+    var mode: Mode = (LaunchArgs.value("-fpMode") == "diet" || LaunchArgs.value("-fpShow") == "diet") ? .diet : .train
     /// 正在播的动画：diet / train / open / close
     var anim: String? = nil
     var at: Double = 0
     /// 安排三餐整页开着
     var sheet = LaunchArgs.value("-fpShow") == "sheet"
-    /// 饮食整页开着（下一步再做）
-    var dsheet = false
+    /// 饮食整页开着
+    var dsheet = LaunchArgs.value("-fpShow") == "diet"
 
     @ObservationIgnored private var link: CADisplayLink?
     @ObservationIgnored private var proxy: LinkProxy?
@@ -178,9 +178,10 @@ final class TodayMotion {
     func showDiet() { if mode != .diet && stepFn == nil && !sheet { runSwitch("diet", 0, true) } }
     func openSheet() { if mode == .train && !sheet && stepFn == nil { startAnim("open") } }
     func closeSheet() { if sheet && stepFn == nil { startAnim("close") } }
+    func closeDiet() { if dsheet && stepFn == nil { startAnim("dclose") } }
     func tapCard() {
         guard !sheet, !dsheet, stepFn == nil else { return }
-        if mode == .train { startAnim("open") }
+        startAnim(mode == .train ? "open" : "dopen")
     }
 
     // MARK: 卡片左右滑：动画跟手，松手后接着播完或退回
@@ -218,7 +219,11 @@ final class TodayMotion {
     func autoplay() async {
         try? await Task.sleep(for: .milliseconds(1200))
         runSwitch("diet", 0, true)
-        try? await Task.sleep(for: .milliseconds(1400))
+        try? await Task.sleep(for: .milliseconds(1200))
+        startAnim("dopen")
+        try? await Task.sleep(for: .milliseconds(1500))
+        startAnim("dclose")
+        try? await Task.sleep(for: .milliseconds(1300))
         runSwitch("train", 0, true)
         try? await Task.sleep(for: .milliseconds(1400))
         startAnim("open")

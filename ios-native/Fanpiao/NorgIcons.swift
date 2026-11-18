@@ -136,3 +136,13 @@ enum NI {
         ])
     }
 }
+
+// 饮食整页右上角的统计、底下的冰箱（预览里的原样路径）
+extension NI {
+    static func fridge() -> Icon {
+        strokeIcon(16, 22, .white, 1.8, cap: .butt, join: .miter, [rct(1, 1, 14, 20, 2), sp("M1 8h14M4 4v2M4 11v3")])
+    }
+    static func bars() -> Icon {
+        fillIcon(16, 14, hx(0xe8e0e0), [rct(0, 6, 4, 8, 1), rct(6, 2, 4, 12, 1), rct(12, 0, 4, 14, 1)])
+    }
+}

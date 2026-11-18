@@ -6,7 +6,7 @@ import { makePlan } from "../www/js/planner.js";
 import { targetsFor, dayInfo, dayLabel, KIND, PLANS, planOf, makeCycle, rhythm, goalName } from "../www/js/plans.js";
 import { FOODS, CATS } from "../www/js/foods.js";
 import { searchLib, libFood, lib } from "../www/js/lib.js";
-import { parseText, preview, FORMAT } from "../www/js/aiimport.js";
+import { parseText, preview, FORMAT, aiPrompt } from "../www/js/aiimport.js";
 import { app } from "./ui-stub.js";
 
 const MODE_S = { out: "外食", cold: "不开火", cook: "自己做" };
@@ -121,6 +121,21 @@ const api = {
   plans: (S) => { S = norm(S); const cur = S.cycle ? S.cycle.id : "steady"; return { cur, plans: PLANS.map((p) => ({ id: p.id, g: p.g, n: p.n, tag: p.tag, d: p.d, simple: !p.edit && p.id !== "manual" && !p.ai && !p.kai })),
     rhythm: rhythm(S, dateStr(), 14).map((r) => ({ d: r.d, kind: r.kind, kcal: r.T.kcal })) }; },
   setPlan: (S, id) => { S = norm(S); S.cycle = makeCycle(S, id); const t = S.days[dateStr()]; if (t && t.plan && !planItems(t.plan, true).length) t.plan = null; return { S }; },
+  // 给 AI 的说明（拍营养成分表、让 AI 帮你填时复制）
+  aiPrompt: (S, withMine) => aiPrompt(norm(S), !!withMine),
+  // 我的页、成就要的累计数字
+  stats: (S) => { S = norm(S); const today = dateStr(); let days = 0, full = 0, items = 0, first = ""; const months = {};
+    for (const [d, day] of Object.entries(S.days)) { if (!day || !day.plan) continue; const it = planItems(day.plan), dn = it.filter((x) => x.done).length;
+      if (dn) { days++; items += dn; if (!first || d < first) first = d; const m = d.slice(0, 7); months[m] = (months[m] || 0) + 1; }
+      if (it.length && dn === it.length) full++; }
+    return { days, full, items, first, month: months[today.slice(0, 7)] || 0, weights: S.weights.length, custom: S.custom.length, plan: S.cycle ? S.cycle.id : "steady", streak: streakOf(S, today), level: levelOf(S), w: S.weights.slice(-14) }; },
+  // 截图、演示用：前 6 天照排好的吃、今天吃了早饭和午饭、7 天体重（不是任何真人的数据）
+  demo: (S) => { S = norm(S); const today = dateStr();
+    for (let i = 6; i >= 1; i--) { const d = addDays(today, -i); replan(S, d, false); const day = dayOf(S, d); for (const s of SLOTS) day.plan.meals[s].forEach((it, k) => { if ((i + k) % 6 !== 0) it.done = true; }); }
+    home(S, today); const t = dayOf(S, today); for (const s of ["b", "l"]) t.plan.meals[s].forEach((it) => { it.done = true; });
+    const w0 = S.profile ? S.profile.weight : 65; S.weights = [];
+    for (let i = 6; i >= 0; i--) S.weights.push({ d: addDays(today, -i), kg: Math.round((w0 - i * 0.12 + (i % 2) * 0.1) * 10) / 10 });
+    if (S.profile) S.profile.weight = S.weights[S.weights.length - 1].kg; return { S }; },
   goals: () => ({ goals: Object.entries(GOALS).map(([id, g]) => ({ id, n: g.n, d: g.d })), activity: ACTIVITY }),
 };
 // Swift 只认字符串：fn 名 + JSON 参数数组 → JSON 结果；出错回 {error}

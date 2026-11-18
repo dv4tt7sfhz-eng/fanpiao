@@ -20,10 +20,12 @@ struct FanpiaoApp: App {
 /// 整体框架照 Norg 可点预览：开场标志 → 四个标签页。底栏用苹果原生 TabView，iOS 26 上就是液态玻璃（按住拖动时的玻璃泡泡也是系统自带的）。
 struct RootView: View {
     @Environment(UIState.self) private var ui
+    @Environment(AppModel.self) private var model
     @State private var width: CGFloat = 390
 
     var body: some View {
         @Bindable var ui = ui
+        @Bindable var model = model
         TabView(selection: $ui.tab) {
             Tab(L.tabToday, systemImage: "calendar", value: 0) {
                 NavigationStack {
@@ -41,7 +43,7 @@ struct RootView: View {
                 MePage()
             }
         }
-        .tint(hx(0xf04d58))
+        .tint(Accent.of(model.accent).tint)
         .environment(\.designK, width / 390)
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.size.width
@@ -49,6 +51,26 @@ struct RootView: View {
             if w > 0 { width = w }
         }
         .background(hx(0x0c0a0b))
+        .overlay(alignment: .top) {
+            if let t = model.toast {
+                ToastView(text: t)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .allowsHitTesting(false)
+            }
+        }
+        .animation(Motion.quick, value: model.toast)
+        .sheet(item: $model.route) { r in
+            RouteView(route: r)
+                .presentationDetents(r == .weight ? [.medium, .large] : [.large])
+        }
+        .fullScreenCover(isPresented: Binding(get: { !model.hasProfile && !ui.bootShow }, set: { _ in })) {
+            WelcomeView()
+                .environment(model)
+                .preferredColorScheme(.dark)
+                .overlay(alignment: .top) {
+                    if let t = model.toast { ToastView(text: t).allowsHitTesting(false) }
+                }
+        }
         .overlay {
             if ui.bootShow {
                 SplashView()
@@ -59,7 +81,9 @@ struct RootView: View {
         }
         .task {
             if !LaunchArgs.has("-fpNoSplash") { ui.playBoot() }
+            await model.refresh()
         }
+        .onChange(of: model.hasProfile) { _, v in if v { Task { await model.refresh() } } }
     }
 }
 

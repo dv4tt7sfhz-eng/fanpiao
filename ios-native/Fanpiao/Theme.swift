@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 和 2.3.0 一样的六个低饱和主题色。
+/// 主题色：默认饭票红（和 Norg 框架一样），另外六个是 2.3.0 的低饱和色。
 struct Accent: Identifiable, Hashable {
     let id: String
     let name: String
@@ -12,7 +12,8 @@ struct Accent: Identifiable, Hashable {
     let glowB: Color   // 背景冷光
 
     static let all: [Accent] = [
-        Accent(id: "", name: "暮", note: "傍晚天边的灰粉", tint: Color(hex: 0xd0928f), hi: Color(hex: 0xe8b7aa), lo: Color(hex: 0x8b5860), glowA: Color(hex: 0x7a4f4f), glowB: Color(hex: 0x3a4a63)),
+        Accent(id: "", name: "饭票红", note: "默认的那一抹红", tint: Color(hex: 0xf04d58), hi: Color(hex: 0xff8a90), lo: Color(hex: 0x9a2a32), glowA: Color(hex: 0x5a1a20), glowB: Color(hex: 0x2a1a24)),
+        Accent(id: "dusk", name: "暮", note: "傍晚天边的灰粉", tint: Color(hex: 0xd0928f), hi: Color(hex: 0xe8b7aa), lo: Color(hex: 0x8b5860), glowA: Color(hex: 0x7a4f4f), glowB: Color(hex: 0x3a4a63)),
         Accent(id: "sea", name: "雾", note: "清晨湖面的雾蓝", tint: Color(hex: 0x8dadd7), hi: Color(hex: 0xbbcaf0), lo: Color(hex: 0x4e7391), glowA: Color(hex: 0x3f5a7c), glowB: Color(hex: 0x56456e)),
         Accent(id: "berry", name: "玫", note: "压干的玫瑰", tint: Color(hex: 0xc58ba1), hi: Color(hex: 0xe3b1c0), lo: Color(hex: 0x87516a), glowA: Color(hex: 0x744d5e), glowB: Color(hex: 0x4a4366)),
         Accent(id: "pine", name: "苔", note: "石头上的青苔", tint: Color(hex: 0x8db69f), hi: Color(hex: 0xaed4c8), lo: Color(hex: 0x5b775f), glowA: Color(hex: 0x46604f), glowB: Color(hex: 0x3a4c60)),
@@ -50,7 +51,7 @@ struct Backdrop: View {
     let accent: Accent
     var body: some View {
         ZStack {
-            Color.black
+            Color(hex: 0x0c0a0b)
             RadialGradient(colors: [accent.glowA.opacity(0.55), .clear], center: UnitPoint(x: 0, y: -0.05), startRadius: 0, endRadius: 420)
             RadialGradient(colors: [accent.glowB.opacity(0.6), .clear], center: UnitPoint(x: 1.1, y: 0.3), startRadius: 0, endRadius: 400)
             RadialGradient(colors: [Color(hex: 0x4d4436).opacity(0.35), .clear], center: UnitPoint(x: -0.1, y: 1.05), startRadius: 0, endRadius: 360)

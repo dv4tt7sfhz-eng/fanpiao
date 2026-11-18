@@ -134,3 +134,30 @@ enum Fmt {
     }
     static func yuan(_ v: Double) -> String { String(format: "%.1f", (v * 10).rounded() / 10) }
 }
+
+/// 我的页、成就要的累计数字
+struct StatsVM: Codable, Hashable, Sendable {
+    var days: Double
+    var full: Double
+    var items: Double
+    var first: String
+    var month: Double
+    var weights: Double
+    var custom: Double
+    var plan: String
+    var streak: Double
+    var level: Level
+    var w: [WeightRec]
+}
+
+extension Fmt {
+    /// 千位加逗号：2390 → 2,390
+    static func k(_ v: Double) -> String {
+        guard v.isFinite else { return "—" }
+        let n = Int(v.rounded())
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.locale = Locale(identifier: "en_US")
+        return f.string(from: NSNumber(value: n)) ?? String(n)
+    }
+}
