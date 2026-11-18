@@ -84,7 +84,7 @@ jobs:
           rec v-boot 4
           rec v-auto 14 -fpNoSplash -fpAutoplay
           rec v-zoom 15 -fpNoSplash -fpZoomDemo
-          rec v-moment 6 -fpNoSplash -fpMoment cheer
+          rec v-moment 11 -fpNoSplash -fpMoment cheer
           sleep 3
           xcrun simctl spawn "$DEV" log show --last 2m --style compact --predicate 'process == "Fanpiao"' 2>/dev/null | grep -iE "fatal|crash|error|exception|precondition" | tail -40 > ../shots/applog.txt || true
           cp ~/Library/Logs/DiagnosticReports/Fanpiao* ../shots/ 2>/dev/null || true

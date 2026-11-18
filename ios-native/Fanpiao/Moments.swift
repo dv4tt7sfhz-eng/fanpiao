@@ -28,7 +28,7 @@ struct MomentView: View {
     var body: some View {
         let txt = L.moment(m.kind)
         ZStack {
-            Color.black.opacity(shown ? 0.62 : 0).ignoresSafeArea()
+            Color.black.opacity(shown ? 0.8 : 0).ignoresSafeArea()
             TimelineView(.animation(paused: reduce)) { tl in
                 let t = tl.date.timeIntervalSince(start)
                 Canvas { ctx, size in draw(ctx, size, t) }
