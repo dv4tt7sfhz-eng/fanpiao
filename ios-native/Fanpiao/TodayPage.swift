@@ -114,10 +114,14 @@ struct TodayPage: View {
             } action: { _, y in
                 scrollY = y / Double(k)
             }
+        }
+        .overlay(alignment: .topLeading) {
+            // 卡片长成整页时放到最上层（用 overlay，不撑大页面，免得整页跟着跳）
             if g.sheetOn {
-                DesignScaled(height: 900) {
+                DesignScaled(height: 844) {
                     HeroCard(g: g, frameOff: g.frameOff)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .ignoresSafeArea()
             }
         }
