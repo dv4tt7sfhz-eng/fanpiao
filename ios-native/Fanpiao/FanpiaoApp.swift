@@ -62,6 +62,12 @@ struct RootView: View {
             }
         }
         .animation(Motion.quick, value: model.toast)
+        .overlay {
+            if let m = model.moment {
+                MomentView(m: m) { model.moment = nil }
+                    .id(m.id)
+            }
+        }
         .sheet(item: $model.route) { r in
             RouteView(route: r)
                 .navigationTransition(.zoom(sourceID: r.id, in: zoom))
@@ -85,6 +91,12 @@ struct RootView: View {
         .task {
             if !LaunchArgs.has("-fpNoSplash") { ui.playBoot() }
             await model.refresh()
+            // 隔了两天以上再打开：欢迎回来
+            if let last = model.stats?.last, !last.isEmpty, AppModel.daysSince(last) >= 2 { model.show(.welcome) }
+            if let k = LaunchArgs.value("-fpMoment"), let kind = MomentKind(rawValue: k) {
+                try? await Task.sleep(for: .milliseconds(600))
+                model.show(kind)
+            }
             // 录屏用：依次从入口框里放大打开 囤货柜 → 每元蛋白 → 奶茶计算
             if LaunchArgs.has("-fpZoomDemo") {
                 for r in [Route.stock, .value, .tea] {

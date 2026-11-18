@@ -19,6 +19,7 @@ struct StockSheet: View {
     @State private var filter = 0
     @State private var adding = false
     @State private var editing: StockItem?
+    @Namespace private var ns
 
     var body: some View {
         let items = (vm?.items ?? []).filter { filter == 0 || $0.low }
@@ -36,6 +37,7 @@ struct StockSheet: View {
                     Label(L.stockIn, systemImage: "plus").font(.subheadline.weight(.bold))
                 }
                 .glassProminentButton()
+                .matchedTransitionSource(id: "stock-in", in: ns)
             }
             .padding(16)
             .glassCard(cornerRadius: 22)
@@ -54,18 +56,20 @@ struct StockSheet: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 40)
             }
-            ForEach(items) { it in
+            ForEach(Array(items.enumerated()), id: \.element.id) { i, it in
                 Button { editing = it } label: { StockRow(it: it) }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScale())
+                    .matchedTransitionSource(id: it.id, in: ns)
+                    .appear(i)
             }
             Text(L.stockNote).font(.caption).foregroundStyle(Palette.ink3)
         }
         .task { vm = await model.stock() }
         .sheet(isPresented: $adding, onDismiss: { Task { vm = await model.stock() } }) {
-            StockInSheet().presentationDetents([.large])
+            StockInSheet().navigationTransition(.zoom(sourceID: "stock-in", in: ns))
         }
         .sheet(item: $editing, onDismiss: { Task { vm = await model.stock() } }) { it in
-            StockEditSheet(it: it).presentationDetents([.medium])
+            StockEditSheet(it: it).navigationTransition(.zoom(sourceID: it.id, in: ns))
         }
     }
 }
@@ -220,7 +224,7 @@ struct ValueSheet: View {
                 ForEach(0..<2, id: \.self) { i in Text(L.valueModes[i]).tag(i) }
             }
             .pickerStyle(.segmented)
-            if mode == 0, let sw = swap(all) { SwapCard(a: sw.0, b: sw.1) }
+            if mode == 0, let sw = swap(all) { SwapCard(a: sw.0, b: sw.1).appear(0) }
             ForEach(Array(list.prefix(30).enumerated()), id: \.element.id) { i, v in
                 HStack(spacing: 12) {
                     Text("\(i + 1)").font(.headline.weight(.heavy)).foregroundStyle(i < 3 ? pink : Palette.ink3).frame(width: 26)
@@ -243,9 +247,11 @@ struct ValueSheet: View {
                 }
                 .padding(14)
                 .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(i == 0 ? Color(hex: 0x2a1214) : Color.white.opacity(0.05)))
+                .appear(i)
             }
             Text(L.valueNote).font(.caption).foregroundStyle(Palette.ink3)
         }
+        .animation(.spring(response: 0.45, dampingFraction: 0.88), value: mode)
         .task { all = await model.values() }
     }
 

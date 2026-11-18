@@ -7,6 +7,7 @@ import { targetsFor, dayInfo, dayLabel, KIND, PLANS, planOf, makeCycle, rhythm, 
 import { FOODS, CATS } from "../www/js/foods.js";
 import { searchLib, libFood, lib } from "../www/js/lib.js";
 import { parseText, preview, FORMAT, aiPrompt } from "../www/js/aiimport.js";
+import { PROVIDERS, visionCfg, snapPrompt, sanitizeSnap, packPrompt, sanitizePack, packToItem } from "../www/js/ai.js";
 import { app } from "./ui-stub.js";
 
 const MODE_S = { out: "外食", cold: "不开火", cook: "自己做" };
@@ -113,6 +114,27 @@ const api = {
     for (const sl of SLOTS) { const keep = (day.plan.meals[sl] || []).filter((x) => x.done); const ids = new Set(keep.map((x) => x.id));
       day.plan.meals[sl] = keep.concat((prev.meals[sl] || []).filter((x) => !ids.has(x.id)).map((x) => ({ id: x.id, qty: x.qty, done: false }))); }
     day.src = "copy"; return { S, v: home(S, d), ok: true }; },
+  // ---------- 拍照识别（用户自己的 AI 密钥，OpenAI 兼容接口） ----------
+  aiInfo: (S) => { S = norm(S); const v = visionCfg(S);
+    return { providers: PROVIDERS.filter((p) => p.id !== "server").map((p) => ({ id: p.id, n: p.n, base: p.base || "", model: p.model || "", vmodel: p.vmodel || "", site: p.site || "" })),
+      provider: S.ai.provider, base: S.ai.base || "", model: S.ai.model || "", key: S.ai.key || "", vmodel: S.ai.vmodel || "",
+      vision: { base: v.base, key: v.key, model: v.model }, text: { base: (S.ai.base || (PROVIDERS.find((p) => p.id === S.ai.provider) || {}).base || "").replace(/\/+$/, ""), key: S.ai.key || "", model: S.ai.model || (PROVIDERS.find((p) => p.id === S.ai.provider) || {}).model || "" } }; },
+  setAI: (S, patch) => { S = norm(S); S.ai = { ...S.ai, ...patch }; return { S }; },
+  snapPrompt: (S, desc, textOnly) => snapPrompt(allFoods(norm(S)), desc || "", !!textOnly),
+  snapClean: (S, raw) => { S = norm(S); const byId = Object.fromEntries(allFoods(S).map((f) => [f.id, f])); const r = sanitizeSnap(raw, byId);
+    return { items: r.items.map(({ $, ...x }) => ({ ...x, price: $ })), note: r.note }; },
+  packPrompt: (two) => packPrompt(!!two),
+  packClean: (raw) => { const r = sanitizePack(raw); if (!r.ok) return { ok: false, note: r.note || "", warn: [], items: [] };
+    const { $, ...x } = packToItem(r.t); return { ok: true, note: r.note || "", warn: r.warn, items: [{ ...x, price: $ }] }; },
+  // 认出来的东西存进食物库，ate=true 就记到这一餐并打勾
+  snapSave: (S, d, slot, items, ate) => { S = norm(S); const day = dayOf(S, d); if (!day.plan) replan(S, d, false);
+    const plan = dayOf(S, d).plan;
+    items.forEach((x, i) => { let id = x.match;
+      if (id) { const c = S.custom.find((f) => f.id === id); if (c) c.on = true; else S.pantry[id] = { ...(S.pantry[id] || {}), on: true }; }
+      else { id = "u" + Date.now().toString(36) + i; S.custom.push({ id, n: String(x.n).trim(), u: String(x.u || "份").trim() || "份", c: x.c, k: x.k, p: x.p, f: x.f, cb: x.cb, na: x.na, fb: x.fb, $: x.price || 0, ck: x.ck, r: x.r, s: x.s, on: true, out: !!x.out, snap: true, ...(x.pack ? { pack: true } : {}) }); }
+      if (!slot) return; const arr = plan.meals[slot]; const hit = arr.find((y) => y.id === id);
+      if (hit && ate && !hit.done) { hit.qty = x.qty; hit.done = true; } else if (hit) hit.qty = Math.round((hit.qty + x.qty) * 2) / 2; else arr.push({ id, qty: x.qty || 1, done: !!ate }); });
+    return { S, v: home(S, d) }; },
   // 我的柜子
   stock: (S) => { S = norm(S); const today = dateStr(); const { byId, T } = ctx(S, today); const use = {}; let n = 0;
     for (let i = 0; i < 7; i++) { const x = S.days[addDays(today, -i)]; if (!x || !x.plan) continue; n++; for (const it of planItems(x.plan)) use[it.id] = (use[it.id] || 0) + it.qty; }
@@ -160,14 +182,14 @@ const api = {
   // 给 AI 的说明（拍营养成分表、让 AI 帮你填时复制）
   aiPrompt: (S, withMine) => aiPrompt(norm(S), !!withMine),
   // 我的页、成就要的累计数字
-  stats: (S) => { S = norm(S); const today = dateStr(); let days = 0, full = 0, items = 0, first = ""; const months = {};
+  stats: (S) => { S = norm(S); const today = dateStr(); let days = 0, full = 0, items = 0, first = "", last = ""; const months = {};
     for (const [d, day] of Object.entries(S.days)) { if (!day || !day.plan) continue; const it = planItems(day.plan), dn = it.filter((x) => x.done).length;
-      if (dn) { days++; items += dn; if (!first || d < first) first = d; const m = d.slice(0, 7); months[m] = (months[m] || 0) + 1; }
+      if (dn) { days++; items += dn; if (!first || d < first) first = d; if (!last || d > last) last = d; const m = d.slice(0, 7); months[m] = (months[m] || 0) + 1; }
       if (it.length && dn === it.length) full++; }
     const m0 = today.slice(0, 7); let mCost = 0, mProt = 0, mDays = 0;
     for (const [d, day] of Object.entries(S.days)) { if (!day || !day.plan || d.slice(0, 7) !== m0 || d > today) continue; const eaten = planItems(day.plan, true); if (!eaten.length) continue;
       const { byId, T } = ctx(norm(JSON.parse(JSON.stringify(S))), d); const te = sumItems(eaten, (id) => byId[id]); mDays++; mCost += te.cost; if (te.p >= T.protein - 5) mProt++; }
-    return { days, full, items, first, month: months[today.slice(0, 7)] || 0, week: weekOf(S, today), monthCost: r1(mCost), monthProtein: mProt, monthAvg: mDays ? r1(mCost / mDays) : 0, weights: S.weights.length, custom: S.custom.length, plan: S.cycle ? S.cycle.id : "steady", streak: streakOf(S, today), level: levelOf(S), w: S.weights.slice(-14) }; },
+    return { days, full, items, first, last, month: months[today.slice(0, 7)] || 0, week: weekOf(S, today), monthCost: r1(mCost), monthProtein: mProt, monthAvg: mDays ? r1(mCost / mDays) : 0, weights: S.weights.length, custom: S.custom.length, plan: S.cycle ? S.cycle.id : "steady", streak: streakOf(S, today), level: levelOf(S), w: S.weights.slice(-14) }; },
   // 截图、演示用：前 6 天照排好的吃、今天吃了早饭和午饭、7 天体重（不是任何真人的数据）
   demo: (S) => { S = norm(S); const today = dateStr();
     S.stock = { chicken_ready: 8, egg: 11, milk: 2, oats: 6, whey: 15 }; S.pantry.whey = { on: true };

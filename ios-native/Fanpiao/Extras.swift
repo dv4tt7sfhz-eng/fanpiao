@@ -32,7 +32,8 @@ struct SchoolSheet: View {
             Text(Lore.schoolSub).font(.subheadline).foregroundStyle(Palette.ink2)
             ForEach(Lore.articles) { a in
                 NavigationLink(value: a) { ArticleRow(a: a) }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScale())
+                    .appear(a.id)
             }
         }
     }
@@ -96,7 +97,7 @@ struct BadgesSheet: View {
         let got = list.filter(\.got).count
         SheetFrame(title: L.meBadgesN(got) + " / \(list.count)") {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                ForEach(list) { b in BadgeCell(b: b) }
+                ForEach(Array(list.enumerated()), id: \.element.id) { i, b in BadgeCell(b: b).appear(i) }
             }
         }
     }
@@ -229,6 +230,7 @@ struct SettingsSheet: View {
     @State private var snack = true
     @State private var ready = false
     @State private var sub: Route?
+    @Namespace private var subNS
 
     var body: some View {
         let accent = Accent.of(model.accent)
@@ -251,21 +253,29 @@ struct SettingsSheet: View {
 
             VStack(spacing: 0) {
                 SettingRow(icon: "person.text.rectangle", color: accent.tint, title: L.setProfile) { sub = .profile }
+                    .matchedTransitionSource(id: Route.profile.id, in: subNS)
+                Divider().overlay(.white.opacity(0.08)).padding(.leading, 52)
+                SettingRow(icon: "key.fill", color: Palette.carb, title: L.setAISettings) { sub = .aiSettings }
+                    .matchedTransitionSource(id: Route.aiSettings.id, in: subNS)
                 Divider().overlay(.white.opacity(0.08)).padding(.leading, 52)
                 SettingRow(icon: "wand.and.stars", color: Palette.sodium, title: L.setAI) { sub = .importAI }
+                    .matchedTransitionSource(id: Route.importAI.id, in: subNS)
                 Divider().overlay(.white.opacity(0.08)).padding(.leading, 52)
                 SettingRow(icon: "paintpalette", color: Palette.fat, title: L.setTheme) { sub = .themes }
+                    .matchedTransitionSource(id: Route.themes.id, in: subNS)
                 Divider().overlay(.white.opacity(0.08)).padding(.leading, 52)
                 SettingRow(icon: "chart.bar", color: Palette.carb, title: L.setRecords) { sub = .records }
+                    .matchedTransitionSource(id: Route.records.id, in: subNS)
                 Divider().overlay(.white.opacity(0.08)).padding(.leading, 52)
                 SettingRow(icon: "basket", color: Palette.protein, title: L.setFoods) { sub = .foods }
+                    .matchedTransitionSource(id: Route.foods.id, in: subNS)
             }
             .glassCard(cornerRadius: 22)
 
             Text(L.meVersion).font(.caption).foregroundStyle(Palette.ink3)
                 .frame(maxWidth: .infinity).padding(.top, 10)
         }
-        .sheet(item: $sub) { RouteView(route: $0) }
+        .sheet(item: $sub) { RouteView(route: $0).navigationTransition(.zoom(sourceID: $0.id, in: subNS)) }
         .onAppear {
             if let h = model.home {
                 budget = h.budget

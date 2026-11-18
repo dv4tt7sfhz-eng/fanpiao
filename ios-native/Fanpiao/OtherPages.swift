@@ -54,8 +54,8 @@ struct PlanPage: View {
 
                 HStack(spacing: 10) {
                     tile(NI.clipboard(), 16, 20, L.planNew) { newRecipe() }
-                    tile(NI.sparkles(), 18, 20, L.planPhoto) { model.route = .importAI }
-                        .zoomSource(.importAI)
+                    tile(NI.sparkles(), 18, 20, L.planPhoto) { model.route = .snap }
+                        .zoomSource(.snap)
                 }
                 .padding(.top, 23)
 
@@ -106,8 +106,9 @@ struct PlanPage: View {
                 if let vm {
                     if open {
                         VStack(spacing: 10) {
-                            ForEach(vm.plans) { p in
+                            ForEach(Array(vm.plans.enumerated()), id: \.element.id) { i, p in
                                 PlanCard(p: p, current: p.id == vm.cur, rhythm: p.id == vm.cur ? vm.rhythm : []) { pick(p) }
+                                    .appear(i)
                             }
                         }
                         .padding(.top, 12)
@@ -162,7 +163,7 @@ struct PlanPage: View {
             .background(RoundedRectangle(cornerRadius: 16, style: .circular).fill(hx(0x1a1a1c)))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScale())
     }
 }
 
@@ -202,7 +203,7 @@ struct PlanCard: View {
             .overlay(RoundedRectangle(cornerRadius: 16, style: .circular).strokeBorder(current ? hx(0x7a2228) : Color.clear, lineWidth: 1))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScale())
     }
 }
 
@@ -282,7 +283,7 @@ struct FindPage: View {
                 media(h)
                 actions(101).padding(.top, 8).padding(.bottom, 26)
             }
-            ForEach(Lore.articles.prefix(5)) { a in
+            ForEach(Lore.articles) { a in
                 officialHeader(a.tag + " · " + L.officialMetaTip)
                 Button {
                     model.route = .article(a.id)
@@ -639,7 +640,7 @@ struct MePage: View {
                 .background(RoundedRectangle(cornerRadius: 18, style: .circular).fill(hx(0x121214)))
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScale())
         .zoomSource(route)
     }
 

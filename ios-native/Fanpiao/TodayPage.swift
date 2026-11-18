@@ -240,7 +240,7 @@ struct TodayContent: View {
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScale(scale: 0.9))
         .zoomSource(route)
     }
 
@@ -304,7 +304,7 @@ struct TodayContent: View {
             )
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScale())
         .zoomSource(.level)
         .padding(.top, 16)
         .padding(.horizontal, 18)
@@ -394,6 +394,7 @@ struct DataCard: View {
                 T(title, 12, .regular, hx(0x8a8a8e))
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
                     T(value, 26, .black, alert ? hx(0xff4d58) : hx(0xf2eded)).monospacedDigit()
+                        .contentTransition(.numericText())
                     T(unit, 11, .bold, hx(0x8a8a8e))
                 }
                 .padding(.top, 6)
@@ -409,7 +410,7 @@ struct DataCard: View {
             )
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScale())
     }
 }
 
@@ -770,6 +771,7 @@ struct DietGroup: View {
 
             HStack(alignment: .firstTextBaseline, spacing: 7) {
                 T(h == nil ? L.dietEaten : Fmt.k(eaten), 48, .black, .white)
+                    .contentTransition(.numericText(value: eaten))
                 T(L.kcal, 14.5, .bold, hx(0x9a9a9e))
             }
             .frame(height: 50)
@@ -1029,6 +1031,7 @@ struct MealBlock: View {
             } else {
                 ForEach(meal.items, id: \.rowID) { it in
                     ItemLine(item: it, slot: meal.slot)
+                        .transition(.asymmetric(insertion: .move(edge: .top).combined(with: .opacity), removal: .scale(scale: 0.96).combined(with: .opacity)))
                 }
             }
         }
@@ -1062,14 +1065,18 @@ struct ItemLine: View {
     var body: some View {
         HStack(spacing: 10) {
             ZStack {
+                Circle().strokeBorder(hx(0x4a4a4e), lineWidth: 1.6)
+                    .opacity(item.done ? 0 : 1)
                 if item.done {
                     Circle().fill(hx(0xe8434c))
+                        .shadow(color: hx(0xe8434c).opacity(0.6), radius: 6)
+                        .transition(.scale(scale: 0.2).combined(with: .opacity))
                     NI.check().frame(width: 11, height: 11)
-                } else {
-                    Circle().strokeBorder(hx(0x4a4a4e), lineWidth: 1.6)
+                        .transition(.scale(scale: 0.4, anchor: .center).combined(with: .opacity))
                 }
             }
             .frame(width: 22, height: 22)
+            .animation(.spring(response: 0.34, dampingFraction: 0.62), value: item.done)
             VStack(alignment: .leading, spacing: 2) {
                 T(item.n, 14, .semibold, item.done ? hx(0x6a6a6e) : hx(0xf2eded))
                     .strikethrough(item.done, color: hx(0x6a6a6e))

@@ -145,6 +145,7 @@ struct StatsVM: Codable, Hashable, Sendable {
     var full: Double
     var items: Double
     var first: String
+    var last: String?
     var month: Double
     var weights: Double
     var custom: Double
@@ -205,4 +206,66 @@ extension Fmt {
         f.locale = Locale(identifier: "en_US")
         return f.string(from: NSNumber(value: n)) ?? String(n)
     }
+}
+
+// ---------- 4.3 拍照识别 ----------
+
+/// AI 认出来的一样（字段和网页版 sanitizeSnap 一样，价格换成了 price）
+struct SnapItem: Codable, Hashable, Identifiable, Sendable {
+    var id = UUID()
+    var n: String
+    var u: String
+    var qty: Double
+    var k: Double
+    var p: Double
+    var f: Double
+    var cb: Double
+    var na: Double
+    var fb: Double
+    var c: String
+    var r: String
+    var ck: Double
+    var s: String
+    var out: Bool
+    var label: Bool?
+    var pkg: Bool?
+    var pack: Bool?
+    var sure: Double
+    var match: String?
+    var price: Double
+
+    enum CodingKeys: String, CodingKey { case n, u, qty, k, p, f, cb, na, fb, c, r, ck, s, out, label, pkg, pack, sure, match, price }
+}
+
+struct SnapResult: Codable, Sendable {
+    var items: [SnapItem]
+    var note: String
+    var ok: Bool?
+    var warn: [String]?
+}
+
+struct AIProvider: Codable, Hashable, Identifiable, Sendable {
+    var id: String
+    var n: String
+    var base: String
+    var model: String
+    var vmodel: String
+    var site: String
+}
+
+struct AIEndpoint: Codable, Hashable, Sendable {
+    var base: String
+    var key: String
+    var model: String
+}
+
+struct AIInfo: Codable, Sendable {
+    var providers: [AIProvider]
+    var provider: String
+    var base: String
+    var model: String
+    var key: String
+    var vmodel: String
+    var vision: AIEndpoint
+    var text: AIEndpoint
 }

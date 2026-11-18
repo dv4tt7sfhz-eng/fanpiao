@@ -321,4 +321,68 @@ enum L {
     static let teaPrice = "这杯多少钱"
     static let teaAdd = "记到加餐"
     static func teaName(_ base: String, _ size: String, _ sugar: String) -> String { "\(base) · \(size) · \(sugar)" }
+
+    // ---------- 4.3 ----------
+    // 暖心小动画
+    static func moment(_ k: MomentKind) -> (String, String) {
+        switch k {
+        case .comfort: return ("记下来就很好。", "明天的饭，我帮你排好了。")
+        case .welcome: return ("欢迎回来", "从今天接着来就好。")
+        case .water: return ("这一点多半是水", "长 1 公斤脂肪大约要多吃 7700 千卡。\n盐、碳水、睡眠都会让体重跳一下，看一周的平均就好。")
+        case .cheer: return ("今天蛋白吃够了", "肌肉是在休息的时候长的，今晚早点睡。")
+        }
+    }
+
+    // 拍一下就识别
+    static let snapTitle = "拍照识别"
+    static let snapModes = ["拍饭菜", "拍营养成分表", "说一句"]
+    static let snapHints = [
+        "拍一盘饭菜、食堂打的饭，或者一包零食的正面。AI 会把每样分开，估热量和蛋白。",
+        "拍包装背面的「营养成分表」，AI 只照着表上的数字抄，不估。拍清楚、别反光。",
+        "不想拍照？说一句吃了什么，比如「一碗牛肉面加一个卤蛋」。"
+    ]
+    static let snapCamera = "拍照"
+    static let snapAlbum = "从相册选"
+    static let snapSayHint = "比如：一碗牛肉面加一个卤蛋"
+    static let snapGo = "让 AI 算"
+    static let snapReading = "正在认……"
+    static let snapStop = "停止"
+    static let snapAte = "已经吃了（打勾）"
+    static func snapSave(_ n: Int) -> String { n > 0 ? "存进食物库并记到这一餐（\(n) 样）" : "至少勾一样" }
+    static let snapAgain = "重新拍"
+    static let snapNothing = "没认出食物，换个角度再拍一张试试。"
+    static let snapFromLabel = "表上读的"
+    static let snapUnsure = "不太确定"
+    static let snapInLib = "库里有"
+    static func snapSaved(_ n: Int) -> String { "存好了 \(n) 样" }
+    static let snapNeedVision = "拍照识别要用能看图的 AI 模型。在「AI 设置」里填一个你自己的密钥就能用。"
+    static let snapNeedText = "「说一句」要用 AI 模型。在「AI 设置」里填一个你自己的密钥就能用。"
+    static let snapOrCopy = "不想填密钥？复制说明发给任何 AI"
+    static let snapPrivacy = "照片只发给你自己选的那家 AI，饭票没有服务器，也不存你的照片。"
+
+    // AI 设置
+    static let aiSetTitle = "AI 设置"
+    static let aiSetSub = "饭票不带 AI，用你自己的密钥。密钥只存在这台手机上。"
+    static let aiProvider = "用哪一家"
+    static let aiKey = "密钥（API Key）"
+    static let aiBase = "接口地址（OpenAI 兼容）"
+    static let aiModel = "模型名"
+    static let aiVModel = "识图模型（可不填）"
+    static let aiNoVisionHere = "这家不能看图，拍照识别要换一家"
+    static func aiVisionDefault(_ m: String) -> String { "识图模型（不填就用 \(m)）" }
+    static func aiGetKey(_ site: String) -> String { "去 \(site) 申请密钥" }
+    static let aiSave = "保存"
+    static let aiSaved = "AI 设置存好了"
+    static let aiRecommend = "想先试试：智谱、通义千问、硅基流动都有能看图的模型，有的有免费额度（以官网为准）。DeepSeek 目前不能看图，只能用「说一句」。"
+    static let aiKeyPrivacy = "饭票只在你点「识别」的时候，把照片或那句话发给你选的那一家。"
+    static let aiNoKey = "还没填 AI 密钥，到「AI 设置」填一个。"
+    static let aiNoVision = "这家 AI 不能看图，或者识图模型名不对。到「AI 设置」换一家，比如智谱或通义千问。"
+    static let aiBadBase = "接口地址不对，到「AI 设置」检查一下。"
+    static let aiNetwork = "连不上 AI，看看网络再试一次。"
+    static let aiBadKey = "密钥不对或者没开通，到「AI 设置」检查一下。"
+    static let aiBadModel = "模型名不对，到「AI 设置」检查一下。"
+    static let aiBusy = "AI 那边太忙或者额度用完了，过一会儿再试。"
+    static let aiBadReply = "AI 回的东西看不懂，再试一次。"
+    static func aiFailed(_ code: Int) -> String { "AI 暂时用不了（\(code)），过一会儿再试。" }
+    static let setAISettings = "AI 设置（拍照识别）"
 }

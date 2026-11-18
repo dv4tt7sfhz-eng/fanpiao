@@ -5,7 +5,7 @@ enum Route: Identifiable, Hashable {
     case addFood(String, Bool)
     case foods, plans, records, dietDetail, profile, importAI
     case school, achievements, level, themes, settings, weight, notice
-    case stock, value, tea
+    case stock, value, tea, snap, aiSettings
     case article(Int)
 
     var id: String {
@@ -22,7 +22,7 @@ enum Route: Identifiable, Hashable {
             "add": .addFood("l", false), "foods": .foods, "plans": .plans, "records": .records, "diet": .dietDetail,
             "profile": .profile, "ai": .importAI, "school": .school, "badges": .achievements, "level": .level,
             "themes": .themes, "settings": .settings, "weight": .weight, "notice": .notice, "article": .article(0),
-            "stock": .stock, "value": .value, "tea": .tea
+            "stock": .stock, "value": .value, "tea": .tea, "snap": .snap, "aiset": .aiSettings
         ]
         return all[s]
     }
@@ -69,6 +69,8 @@ struct RouteView: View {
         case .stock: StockSheet()
         case .value: ValueSheet()
         case .tea: TeaSheet()
+        case .snap: SnapSheet()
+        case .aiSettings: AISettingsSheet()
         case .article(let i): NavigationStack { ArticleView(a: Lore.articles[min(max(0, i), Lore.articles.count - 1)], closable: true) }
         }
     }

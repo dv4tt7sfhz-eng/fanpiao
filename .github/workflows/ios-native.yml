@@ -73,6 +73,10 @@ jobs:
           shot 11-stock -fpNoSplash -fpTab 0 -fpRoute stock
           shot 12-value -fpNoSplash -fpTab 0 -fpRoute value
           shot 13-tea -fpNoSplash -fpTab 0 -fpRoute tea
+          shot 14-snap -fpNoSplash -fpTab 1 -fpRoute snap
+          shot 15-aiset -fpNoSplash -fpTab 1 -fpRoute aiset
+          shot 16-comfort -fpNoSplash -fpTab 0 -fpMoment comfort
+          shot 17-water -fpNoSplash -fpTab 0 -fpMoment water
           # 录两段视频看动画：开场；排餐/饮食来回切换 + 卡片长成整页再收回
           rec() { n=$1; t=$2; shift 2; xcrun simctl terminate "$DEV" com.fanpiao.app >/dev/null 2>&1 || true; sleep 1
             xcrun simctl io "$DEV" recordVideo --codec=h264 --force "../shots/$n.mp4" & P=$!; sleep 1
@@ -80,6 +84,7 @@ jobs:
           rec v-boot 4
           rec v-auto 14 -fpNoSplash -fpAutoplay
           rec v-zoom 15 -fpNoSplash -fpZoomDemo
+          rec v-moment 6 -fpNoSplash -fpMoment cheer
           sleep 3
           xcrun simctl spawn "$DEV" log show --last 2m --style compact --predicate 'process == "Fanpiao"' 2>/dev/null | grep -iE "fatal|crash|error|exception|precondition" | tail -40 > ../shots/applog.txt || true
           cp ~/Library/Logs/DiagnosticReports/Fanpiao* ../shots/ 2>/dev/null || true

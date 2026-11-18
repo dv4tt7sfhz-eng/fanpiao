@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import Observation
 
 /// 整个 App 的数据。状态（和网页版一样的 fanpiao.v1 格式）存在手机里的一个文件里。
@@ -18,6 +19,8 @@ final class AppModel {
     var stats: StatsVM?
     /// 弹出页面
     var route: Route?
+    /// 暖心小动画（安慰、欢迎回来、体重涨的是水、蛋白吃够了）
+    var moment: Moment?
 
     private let file: URL = {
         let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -50,11 +53,18 @@ final class AppModel {
         return f.string(from: d)
     }
 
-    /// 换一天看
+    /// 换一天看：日期条、标题一起滑过去，数字跟着滚
     func setDay(_ offset: Int) async {
         guard offset != dayOffset else { return }
-        dayOffset = offset
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { dayOffset = offset }
         await refresh()
+    }
+
+    /// 从某天（yyyy-MM-dd）到今天过了几天
+    static func daysSince(_ d: String) -> Int {
+        let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"
+        guard let x = f.date(from: d), let y = f.date(from: today) else { return 0 }
+        return Int((y.timeIntervalSince(x) / 86400).rounded())
     }
 
     static var today: String {
@@ -78,7 +88,15 @@ final class AppModel {
     // ---------- 首页 ----------
     func refresh() async { await homeCall("home", [.raw(state), .str(day)]) }
     func replan() async { await homeCall("replan", [.raw(state), .str(day)]); say(L.replanStock) }
-    func toggle(_ slot: String, _ i: Int) async { await homeCall("toggle", [.raw(state), .str(day), .str(slot), .num(Double(i))]) }
+    func toggle(_ slot: String, _ i: Int) async {
+        let before = home
+        await homeCall("toggle", [.raw(state), .str(day), .str(slot), .num(Double(i))])
+        guard let a = before, let b = home, dayOffset == 0 else { return }
+        if a.eaten.kcal <= a.T.kcal && b.eaten.kcal > b.T.kcal { show(.comfort) }
+        else if a.eaten.p < a.T.protein && b.eaten.p >= b.T.protein { show(.cheer) }
+    }
+    /// 放一个暖心小动画
+    func show(_ kind: MomentKind) { moment = Moment(kind: kind) }
     func remove(_ slot: String, _ i: Int) async { await homeCall("removeItem", [.raw(state), .str(day), .str(slot), .num(Double(i))]) }
     func setQty(_ slot: String, _ i: Int, _ q: Double) async { await homeCall("setQty", [.raw(state), .str(day), .str(slot), .num(Double(i)), .num(q)]) }
     func setMode(_ slot: String, _ mode: String) async { await homeCall("setMode", [.raw(state), .str(day), .str(slot), .str(mode)]) }
@@ -120,10 +138,37 @@ final class AppModel {
     func setStock(_ id: String, _ n: Double) async {
         if let r = try? await engine.call("setStock", [.raw(state), .str(id), .num(n)], as: StateOnly.self) { adopt(r.S); await refresh() }
     }
+    // ---------- 拍照识别 ----------
+    func aiInfo() -> AIInfo? { try? engine.callSync("aiInfo", [.raw(state)], as: AIInfo.self) }
+    func setAI(_ p: [String: Any]) async {
+        let json = String(data: (try? JSONSerialization.data(withJSONObject: p)) ?? Data("{}".utf8), encoding: .utf8) ?? "{}"
+        if let r = try? await engine.call("setAI", [.raw(state), .raw(json)], as: StateOnly.self) { adopt(r.S) }
+    }
+    /// mode: 0 拍饭菜，1 拍营养成分表，2 说一句
+    func snap(mode: Int, images: [UIImage], desc: String) async throws -> SnapResult {
+        guard let info = aiInfo() else { throw AIClient.Failure(message: L.aiFailed(0)) }
+        if mode == 1 {
+            let prompt = try engine.callSync("packPrompt", [.bool(images.count > 1)], as: String.self)
+            let raw = try await AIClient.ask(info.vision, prompt: prompt, images: images)
+            return try engine.callSync("packClean", [.raw(raw)], as: SnapResult.self)
+        }
+        let prompt = try engine.callSync("snapPrompt", [.raw(state), .str(desc), .bool(mode == 2)], as: String.self)
+        let raw = mode == 2
+            ? try await AIClient.ask(info.text, prompt: prompt, userText: String(desc.prefix(300)))
+            : try await AIClient.ask(info.vision, prompt: prompt, images: images)
+        return try engine.callSync("snapClean", [.raw(state), .raw(raw)], as: SnapResult.self)
+    }
+    func snapSave(_ items: [SnapItem], slot: String, ate: Bool) async {
+        guard let data = try? JSONEncoder().encode(items), let json = String(data: data, encoding: .utf8) else { return }
+        await homeCall("snapSave", [.raw(state), .str(day), .str(slot), .raw(json), .bool(ate)])
+        say(L.snapSaved(items.count))
+    }
+
     func values() async -> [ValueItem] { (try? await engine.call("values", [.raw(state)], as: [ValueItem].self)) ?? [] }
     /// 记一杯奶茶这类不在食物库里的东西（直接记成已吃）
     func addQuick(_ slot: String, name: String, k: Double, p: Double, f: Double, cb: Double, cost: Double) async {
         await homeCall("addQuick", [.raw(state), .str(day), .str(slot), .str(name), .num(k), .num(p), .num(f), .num(cb), .num(cost)])
+        show(.comfort)
     }
     func foods() async -> FoodsVM? { try? await engine.call("foods", [.raw(state)], as: FoodsVM.self) }
     func setOn(_ id: String, _ on: Bool) async {
@@ -137,7 +182,11 @@ final class AppModel {
     }
     func goals() -> GoalsVM? { try? engine.callSync("goals", [], as: GoalsVM.self) }
     func addWeight(_ kg: Double) async {
-        if let r = try? await engine.call("addWeight", [.raw(state), .num(kg)], as: StateOnly.self) { adopt(r.S); say("记下了：\(Fmt.one(kg)) kg") }
+        let prev = stats?.w.last?.kg
+        if let r = try? await engine.call("addWeight", [.raw(state), .num(kg)], as: StateOnly.self) {
+            adopt(r.S)
+            if let prev, kg - prev >= 0.3 { show(.water) } else { say("记下了：\(Fmt.one(kg)) kg") }
+        }
     }
     func setProfile(_ p: [String: Any]) async {
         let json = String(data: (try? JSONSerialization.data(withJSONObject: p)) ?? Data("{}".utf8), encoding: .utf8) ?? "{}"
