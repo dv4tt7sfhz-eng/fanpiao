@@ -15,6 +15,8 @@ struct Targets: Codable, Hashable, Sendable {
 }
 
 struct MealItem: Codable, Hashable, Identifiable, Sendable {
+    /// 柜子里还剩几份（没放进柜子就是 nil）
+    var left: Double?
     var i: Int
     var id: String
     var n: String
@@ -64,6 +66,8 @@ struct HomeVM: Codable, Hashable, Sendable {
     var planName: String
     var planTag: String
     var goalName: String
+    /// 本周（周一开始）吃了几天
+    var week: Double?
     var streak: Double
     var level: Level
     var profile: ProfileVM?
@@ -148,6 +152,47 @@ struct StatsVM: Codable, Hashable, Sendable {
     var streak: Double
     var level: Level
     var w: [WeightRec]
+    var week: Double?
+    var monthCost: Double?
+    var monthProtein: Double?
+    var monthAvg: Double?
+}
+
+/// 我的柜子里的一样
+struct StockItem: Codable, Hashable, Identifiable, Sendable {
+    var id: String
+    var n: String
+    var u: String
+    var left: Double
+    var price: Double
+    var p: Double
+    var k: Double
+    var days: Double
+    var low: Bool
+}
+
+struct StockVM: Codable, Hashable, Sendable {
+    var items: [StockItem]
+    var proteinDays: Double
+}
+
+/// 每元蛋白排行的一样
+struct ValueItem: Codable, Hashable, Identifiable, Sendable {
+    var id: String
+    var n: String
+    var u: String
+    var price: Double
+    var p: Double
+    var k: Double
+    var gpy: Double
+    var kpy: Double
+    var stocked: Bool
+}
+
+struct CopyResult: Decodable, Sendable {
+    var S: String
+    var v: HomeVM
+    var ok: Bool
 }
 
 extension Fmt {

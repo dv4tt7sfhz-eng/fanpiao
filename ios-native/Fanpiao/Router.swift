@@ -5,6 +5,7 @@ enum Route: Identifiable, Hashable {
     case addFood(String, Bool)
     case foods, plans, records, dietDetail, profile, importAI
     case school, achievements, level, themes, settings, weight, notice
+    case stock, value, tea
     case article(Int)
 
     var id: String {
@@ -20,7 +21,8 @@ enum Route: Identifiable, Hashable {
         let all: [String: Route] = [
             "add": .addFood("l", false), "foods": .foods, "plans": .plans, "records": .records, "diet": .dietDetail,
             "profile": .profile, "ai": .importAI, "school": .school, "badges": .achievements, "level": .level,
-            "themes": .themes, "settings": .settings, "weight": .weight, "notice": .notice, "article": .article(0)
+            "themes": .themes, "settings": .settings, "weight": .weight, "notice": .notice, "article": .article(0),
+            "stock": .stock, "value": .value, "tea": .tea
         ]
         return all[s]
     }
@@ -64,6 +66,9 @@ struct RouteView: View {
         case .settings: SettingsSheet()
         case .weight: WeightSheet()
         case .notice: NoticeSheet()
+        case .stock: StockSheet()
+        case .value: ValueSheet()
+        case .tea: TeaSheet()
         case .article(let i): NavigationStack { ArticleView(a: Lore.articles[min(max(0, i), Lore.articles.count - 1)], closable: true) }
         }
     }
@@ -80,4 +85,23 @@ struct ToastView: View {
             .glassCapsule(interactive: false)
             .padding(.top, 8)
     }
+}
+
+// MARK: - 新页面从点的那个框里长出来
+
+extension EnvironmentValues {
+    @Entry var zoomNS: Namespace.ID? = nil
+}
+
+private struct ZoomSource: ViewModifier {
+    let id: String
+    @Environment(\.zoomNS) private var ns
+    @ViewBuilder func body(content: Content) -> some View {
+        if let ns { content.matchedTransitionSource(id: id, in: ns) } else { content }
+    }
+}
+
+extension View {
+    /// 点这个框打开 route 时，新页面从这个框放大出来；关掉时缩回这个框
+    func zoomSource(_ route: Route) -> some View { modifier(ZoomSource(id: route.id)) }
 }

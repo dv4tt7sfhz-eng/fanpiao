@@ -15,7 +15,7 @@ enum L {
 
     // 今日页
     static let days = ["前日", "昨日", "今日", "明日", "后日"]
-    static let shortcuts = ["饭票学堂", "成就", "官方食谱", "段位", "主题市场"]
+    static let shortcuts = ["饭票学堂", "囤货柜", "官方食谱", "每元蛋白", "奶茶计算"]
     static let bodyData = "身体数据"
     static let edit = "编辑"
     static let rankTitle = "饮食段位"
@@ -126,13 +126,13 @@ enum L {
     static func rankXPText(_ cur: Double, _ need: Double) -> String { "\(Fmt.n(cur)) / \(Fmt.n(need)) XP" }
 
     // 今日卡片（有排餐时）
-    static func cardSubA(_ n: Int, _ kcal: Double) -> String { "\(n) 样 · 约 \(Fmt.k(kcal)) kcal" }
-    static func cardSubB(_ done: Int, _ n: Int, _ cost: Double) -> String { "已吃 \(done)/\(n) · 约 ¥\(Fmt.yuan(cost))" }
+    static func cardSubA(_ n: Int, _ kcal: Double, _ done: Int) -> String { "\(n) 样 · 约 \(Fmt.k(kcal)) kcal · 已吃 \(done)/\(n)" }
+    static func cardSubB(_ cost: Double, _ p: Double) -> String { "今天约 ¥\(Fmt.yuan(cost)) · 蛋白 \(Fmt.n(p)) g" }
     static func dietMealsN(_ n: Int) -> String { "已记录 \(n) 餐" }
 
     // 安排三餐整页：餐食板块
     static func sheetDate(_ m: Int, _ d: Int, _ name: String) -> String { "\(m)月\(d)日 · \(name)" }
-    static func mealSum(_ kcal: Double, _ p: Double) -> String { "\(Fmt.k(kcal)) kcal · 蛋白 \(Fmt.n(p)) g" }
+    static func mealSum(_ kcal: Double, _ p: Double, _ cost: Double) -> String { "\(Fmt.k(kcal)) kcal · 蛋白 \(Fmt.n(p)) g · ¥\(Fmt.yuan(cost))" }
     static func itemQty(_ q: String, _ u: String) -> String { "\(q) × \(u)" }
     static func itemSub(_ p: Double, _ cost: Double) -> String { "蛋白 \(Fmt.one(p))g · ¥\(Fmt.yuan(cost))" }
     static let mealSkip = "轻断食：这一餐不吃"
@@ -181,7 +181,7 @@ enum L {
     static let readMore = "看全文"
 
     // 我的页
-    static let meStatLabels = ["记录天数", "连续天数", "体重记录"]
+    static let meStatLabels = ["记录天数", "本周", "体重记录"]
     static func meBioText(_ goal: String, _ h: Double, _ w: Double, _ kcal: Double) -> String { "\(goal) · \(Fmt.n(h)) cm · \(Fmt.one(w)) kg · 每天 \(Fmt.k(kcal)) kcal" }
     static func meBadgesN(_ n: Int) -> String { "成就 \(n)" }
     static func meMonthTotalN(_ n: Int) -> String { "总计 \(n) 天" }
@@ -235,4 +235,90 @@ enum L {
     static let noticeSub = "排餐、记录都在这台手机上完成，不会给你发推送。"
 
     static let done = "完成"
+
+    // ---------- 4.2 ----------
+    static let copyDone = "照搬了昨天的三餐，打过勾的没动"
+    static let copyNone = "昨天没有排餐，没法照搬"
+    static let replanStock = "重新排好了，先用了柜子里的"
+    static let ctaSheet = "重新排 · 先吃柜子里的"
+    static let copyLabel = "和昨天一样"
+    static func itemLeft(_ n: Double) -> String { "柜子里还剩 \(Fmt.one(n))" }
+
+    // 红字超标
+    static let over = "超标"
+    static func overKcal(_ v: Double) -> String { "超标 \(Fmt.k(v)) kcal" }
+
+    // 身体数据：钠、痘痘分
+    static let cardSodium = "钠（今天）"
+    static let mg = "mg"
+    static func sodiumLeft(_ v: Double) -> String { "还能吃 \(Fmt.k(v)) mg" }
+    static func sodiumOver(_ v: Double) -> String { "超标 \(Fmt.k(v)) mg" }
+    static let cardAcne = "痘痘分（今天）"
+    static let acneSoon = "4.5 上线"
+
+    // 我的页
+    static func monthSpent(_ v: Double) -> String { "花了 ¥\(Fmt.n(v))" }
+    static let reviewTitle = "这个月的你"
+    static let reviewLabels = ["蛋白吃够", "平均每天", "皮肤分"]
+    static let reviewNote = "只讲过程，不放体重"
+    static let reviewShare = "分享这个月"
+    static func reviewText(_ days: Int, _ avg: Double) -> String { "这个月在饭票里：蛋白吃够 \(days) 天，平均每天吃饭花 ¥\(Fmt.yuan(avg))。" }
+
+    // 我的柜子
+    static let stockTitle = "我的柜子"
+    static let stockIn = "进货"
+    static let stockSumA = "柜子里的蛋白够吃"
+    static func stockDays(_ d: Double) -> String { "约 \(Fmt.one(d)) 天" }
+    static let stockSumB = "按你现在的排餐算"
+    static let stockFilters = ["全部", "快吃完"]
+    static func stockEach(_ u: String, _ price: Double, _ p: Double) -> String { "每\(u) ¥\(Fmt.yuan(price)) · 蛋白 \(Fmt.one(p)) g" }
+    static func stockLasts(_ d: Double) -> String { d < 1 ? "不够一天了" : "够 \(Fmt.n(d)) 天" }
+    static let stockLow = "该补了"
+    static let stockEmpty = "柜子还是空的"
+    static let stockEmptySub = "网购到货后点右上角「进货」录一次，以后在三餐里打勾就会自动减。"
+    static let stockPick = "进什么货？"
+    static let stockSearch = "搜你的食物"
+    static let stockCount = "数量"
+    static let stockTotal = "这一批一共多少钱（可不填）"
+    static func stockUnit(_ n: Double, _ total: Double, _ p: Double) -> String {
+        guard n > 0, total > 0 else { return "填了总价，自动算单价" }
+        let each = total / n
+        return "= 每份 ¥\(Fmt.yuan(each))" + (p > 0 ? " · 每克蛋白 ¥\(String(format: "%.2f", each / p))" : "")
+    }
+    static let stockSave = "放进柜子"
+    static let stockEdit = "改数量"
+    static let stockRemove = "拿出柜子"
+    static let stockNote = "剩 3 份以下会写「该补了」。饭票不卖货，也不推荐去哪买。"
+
+    // 每元蛋白
+    static let valueTitle = "每元蛋白"
+    static let valueSub = "1 块钱能买到几克蛋白（你开着的食物和柜子里的）"
+    static let valueModes = ["每元蛋白", "每元热量"]
+    static func valueEach(_ price: Double, _ u: String, _ p: Double) -> String { "¥\(Fmt.yuan(price)) / \(u) · 蛋白 \(Fmt.one(p)) g" }
+    static let valueUnitP = "g / 元"
+    static let valueUnitK = "kcal / 元"
+    static let valueCupboard = "柜子里"
+    static let swapTitle = "换一换"
+    static func swapA(_ n: String, _ price: Double, _ p: Double) -> String { "\(n)（¥\(Fmt.yuan(price))，蛋白 \(Fmt.one(p)) g）" }
+    static func swapB(_ n: String, _ q: Double, _ cost: Double) -> String { "→ \(n) \(Fmt.one(q)) 份（¥\(Fmt.yuan(cost))，蛋白一样多）" }
+    static func swapSave(_ v: Double) -> String { "每次省 ¥\(Fmt.yuan(v))" }
+    static let valueNote = "价格来自食物库和你进货时填的数，可以在食物库或柜子里改。不推广告。"
+
+    // 奶茶计算
+    static let teaTitle = "奶茶计算"
+    static let teaSub = "粗略估算，不同店差很多，以店里标的为准。"
+    static let teaBase = "底"
+    static let teaBases = ["奶茶", "鲜奶茶", "果茶", "纯茶"]
+    static let teaSize = "杯型"
+    static let teaSizes = ["中杯", "大杯"]
+    static let teaSugar = "甜度"
+    static let teaSugars = ["全糖", "七分", "五分", "三分", "无糖"]
+    static let teaTops = "加料"
+    static let teaTopNames = ["珍珠", "椰果", "芋圆", "奶盖", "布丁"]
+    static let teaKcal = "大约"
+    static func teaSugarG(_ g: Double) -> String { "糖约 \(Fmt.n(g)) g" }
+    static let teaTip = "少一档甜度、不加奶盖，热量掉得最多。"
+    static let teaPrice = "这杯多少钱"
+    static let teaAdd = "记到加餐"
+    static func teaName(_ base: String, _ size: String, _ sugar: String) -> String { "\(base) · \(size) · \(sugar)" }
 }

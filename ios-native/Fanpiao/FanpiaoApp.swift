@@ -22,6 +22,8 @@ struct RootView: View {
     @Environment(UIState.self) private var ui
     @Environment(AppModel.self) private var model
     @State private var width: CGFloat = 390
+    /// 新页面从点的那个框里长出来（iOS 18 的缩放转场）
+    @Namespace private var zoom
 
     var body: some View {
         @Bindable var ui = ui
@@ -45,6 +47,7 @@ struct RootView: View {
         }
         .tint(Accent.of(model.accent).tint)
         .environment(\.designK, width / 390)
+        .environment(\.zoomNS, zoom)
         .onGeometryChange(for: CGFloat.self) { proxy in
             proxy.size.width
         } action: { w in
@@ -61,7 +64,7 @@ struct RootView: View {
         .animation(Motion.quick, value: model.toast)
         .sheet(item: $model.route) { r in
             RouteView(route: r)
-                .presentationDetents(r == .weight ? [.medium, .large] : [.large])
+                .navigationTransition(.zoom(sourceID: r.id, in: zoom))
         }
         .fullScreenCover(isPresented: Binding(get: { !model.hasProfile && !ui.bootShow }, set: { _ in })) {
             WelcomeView()
@@ -82,6 +85,15 @@ struct RootView: View {
         .task {
             if !LaunchArgs.has("-fpNoSplash") { ui.playBoot() }
             await model.refresh()
+            // 录屏用：依次从入口框里放大打开 囤货柜 → 每元蛋白 → 奶茶计算
+            if LaunchArgs.has("-fpZoomDemo") {
+                for r in [Route.stock, .value, .tea] {
+                    try? await Task.sleep(for: .milliseconds(1600))
+                    model.route = r
+                    try? await Task.sleep(for: .milliseconds(2200))
+                    model.route = nil
+                }
+            }
         }
         .onChange(of: model.hasProfile) { _, v in if v { Task { await model.refresh() } } }
     }

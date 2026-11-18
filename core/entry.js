@@ -17,7 +17,7 @@ const qtyText = (q) => (Number.isInteger(q) ? String(q) : String(Math.round(q * 
 function norm(raw) {
   const b = blank();
   const s = raw ? (typeof raw === "string" ? JSON.parse(raw) : raw) : b;
-  return { ...b, ...s, prefs: { ...b.prefs, ...s.prefs, modes: { ...b.prefs.modes, ...(s.prefs || {}).modes } }, ai: { ...b.ai, ...s.ai }, cloud: { ...b.cloud, ...s.cloud } };
+  return { ...b, ...s, stock: { ...(s.stock || {}) }, prefs: { ...b.prefs, ...s.prefs, modes: { ...b.prefs.modes, ...(s.prefs || {}).modes } }, ai: { ...b.ai, ...s.ai }, cloud: { ...b.cloud, ...s.cloud } };
 }
 function ctx(S, d) {
   const day = dayOf(S, d);
@@ -33,7 +33,9 @@ function replan(S, d, variety) {
     locked[s] = day.plan ? day.plan.meals[s].filter((it) => it.done && byId[it.id]) : [];
     avoid[s] = new Set(prev && (variety || !day.plan) ? prev.meals[s].filter((it) => !it.done).map((it) => it.id) : []);
   }
-  const plan = makePlan({ foods: enabled, T, modes: day.modes, budget: S.prefs.budget, snack: S.prefs.snack, locked, avoid, seed: Date.now(), skip: info.skip, plate: info.plate });
+  const stock = S.stock || {};
+  const pool = enabled.map((f) => ((stock[f.id] || 0) > 0 ? { ...f, $: 0 } : f));
+  const plan = makePlan({ foods: pool, T, modes: day.modes, budget: S.prefs.budget, snack: S.prefs.snack, locked, avoid, seed: Date.now(), skip: info.skip, plate: info.plate });
   day.plan = { meals: plan.meals }; day.tip = ""; day.src = "local"; day.T = { kcal: T.kcal, protein: T.protein }; day.pv = (day.pv || 0) + 1;
 }
 function issues(tp, T, budget) {
@@ -50,6 +52,12 @@ function streakOf(S, today) {
   const has = (d) => { const x = S.days[d]; return !!(x && x.plan && planItems(x.plan, true).length); };
   let n = 0, d = has(today) ? today : addDays(today, -1);
   while (has(d) && n < 999) { n++; d = addDays(d, -1); }
+  return n;
+}
+// 本周（周一开始）有几天打过勾
+function weekOf(S, today) {
+  const wd = (new Date(today + "T12:00:00").getDay() + 6) % 7; let n = 0;
+  for (let i = 0; i <= wd; i++) { const x = S.days[addDays(today, -i)]; if (x && x.plan && planItems(x.plan, true).length) n++; }
   return n;
 }
 function levelOf(S) {
@@ -79,12 +87,12 @@ function home(S, d) {
   const tp = sumItems(planItems(day.plan), get), te = sumItems(planItems(day.plan, true), get);
   const meals = SLOTS.filter((s) => S.prefs.snack || s !== "s" || day.plan.meals.s.length).map((s) => {
     const items = day.plan.meals[s].map((it, i) => { const f = get(it.id) || {}; return { i, id: it.id, n: f.n || "（已删除的食物）", u: f.u || "", qty: it.qty, qtyText: qtyText(it.qty),
-      kcal: Math.round((f.k || 0) * it.qty), p: r1((f.p || 0) * it.qty), cost: r1((f.$ || 0) * it.qty), done: !!it.done }; });
+      kcal: Math.round((f.k || 0) * it.qty), p: r1((f.p || 0) * it.qty), cost: r1((f.$ || 0) * it.qty), done: !!it.done, left: S.stock && S.stock[it.id] != null ? r1(S.stock[it.id]) : null }; });
     return { slot: s, name: SLOT_NAME[s], mode: s === "s" ? "" : MODE_S[day.modes[s]] || "", skip: info.skip.includes(s), items, sum: tot(sumItems(day.plan.meals[s], get)) };
   });
   const p = S.profile;
   return { date: d, T: tgt(T), planned: tot(tp), eaten: tot(te), meals, issues: issues(tp, T, S.prefs.budget), label: dayLabel(S, d), kindName: T.kind ? KIND[T.kind].n : "",
-    planName: info.plan.n, planTag: info.plan.tag, goalName: GOALS[T.goal].n, streak: streakOf(S, d), level: levelOf(S),
+    planName: info.plan.n, planTag: info.plan.tag, week: weekOf(S, dateStr()), goalName: GOALS[T.goal].n, streak: streakOf(S, d), level: levelOf(S),
     profile: p ? { sex: p.sex, age: p.age, height: p.height, weight: p.weight, goal: p.goal } : null, budget: S.prefs.budget, accent: S.prefs.accent || "",
     salt: r1(saltOf(tp.na)) };
 }
@@ -96,7 +104,35 @@ const api = {
   hasProfile: (S) => !!norm(S).profile,
   home: (S, d) => { S = norm(S); const v = home(S, d || dateStr()); prune(S); return { S, v }; },
   replan: (S, d) => { S = norm(S); replan(S, d || dateStr(), true); return { S, v: home(S, d || dateStr()) }; },
-  toggle: (S, d, slot, i) => { S = norm(S); const day = dayOf(S, d); const it = day.plan && day.plan.meals[slot][i]; if (it) it.done = !it.done; return { S, v: home(S, d) }; },
+  toggle: (S, d, slot, i) => { S = norm(S); const day = dayOf(S, d); const it = day.plan && day.plan.meals[slot][i];
+    if (it) { it.done = !it.done; if (S.stock[it.id] != null) S.stock[it.id] = Math.max(0, r1(S.stock[it.id] + (it.done ? -it.qty : it.qty))); }
+    return { S, v: home(S, d) }; },
+  // 和昨天一样：今天打过勾的不动，没打勾的换成昨天那一份
+  copyDay: (S, d) => { S = norm(S); const prev = (S.days[addDays(d, -1)] || {}).plan; if (!prev || !planItems(prev).length) return { S, v: home(S, d), ok: false };
+    const day = dayOf(S, d); if (!day.plan) day.plan = { meals: { b: [], l: [], d: [], s: [] } };
+    for (const sl of SLOTS) { const keep = (day.plan.meals[sl] || []).filter((x) => x.done); const ids = new Set(keep.map((x) => x.id));
+      day.plan.meals[sl] = keep.concat((prev.meals[sl] || []).filter((x) => !ids.has(x.id)).map((x) => ({ id: x.id, qty: x.qty, done: false }))); }
+    day.src = "copy"; return { S, v: home(S, d), ok: true }; },
+  // 我的柜子
+  stock: (S) => { S = norm(S); const today = dateStr(); const { byId, T } = ctx(S, today); const use = {}; let n = 0;
+    for (let i = 0; i < 7; i++) { const x = S.days[addDays(today, -i)]; if (!x || !x.plan) continue; n++; for (const it of planItems(x.plan)) use[it.id] = (use[it.id] || 0) + it.qty; }
+    let prot = 0; const items = [];
+    for (const [id, left] of Object.entries(S.stock)) { const f = byId[id]; if (!f) continue; const per = n ? (use[id] || 0) / n : 0; const daily = per > 0 ? per : f.st || 1;
+      prot += left * (f.p || 0); items.push({ id, n: f.n, u: f.u, left: r1(left), price: f.$ || 0, p: f.p || 0, k: f.k || 0, days: Math.floor(left / daily), low: left <= 3 }); }
+    items.sort((a, b) => (a.low === b.low ? a.days - b.days : a.low ? -1 : 1));
+    return { items, proteinDays: T.protein ? r1(prot / T.protein) : 0 }; },
+  // 进货：数量 + 这一批一共多少钱（自动算单价）
+  stockIn: (S, id, n, total) => { S = norm(S); S.stock[id] = r1((S.stock[id] || 0) + n);
+    const c = S.custom.find((f) => f.id === id), patch = { on: true }; if (total > 0 && n > 0) patch.$ = Math.round((total / n) * 100) / 100;
+    if (c) Object.assign(c, patch); else S.pantry[id] = { ...(S.pantry[id] || {}), ...patch }; return { S }; },
+  setStock: (S, id, n) => { S = norm(S); if (n > 0) S.stock[id] = r1(n); else delete S.stock[id]; return { S }; },
+  // 每元蛋白 / 每元热量
+  values: (S) => { S = norm(S); return allFoods(S).filter((f) => (f.on || S.stock[f.id] != null) && f.r !== "manual" && (f.$ || 0) > 0)
+    .map((f) => ({ id: f.id, n: f.n, u: f.u, price: f.$, p: f.p || 0, k: f.k || 0, gpy: r1((f.p || 0) / f.$), kpy: Math.round((f.k || 0) / f.$), stocked: S.stock[f.id] != null })); },
+  // 记一杯奶茶这类不在食物库里的东西
+  addQuick: (S, d, slot, name, k, p, f, cb, cost) => { S = norm(S); const id = "q" + Date.now().toString(36);
+    S.custom.push({ id, n: name, u: "杯", c: "other", r: "manual", k, p, f, cb, $: cost, na: 0, fb: 0, st: 1, mx: 1, on: false });
+    return api.addFood(S, d, slot, id, 1, true); },
   removeItem: (S, d, slot, i) => { S = norm(S); const day = dayOf(S, d); if (day.plan) day.plan.meals[slot].splice(i, 1); return { S, v: home(S, d) }; },
   setQty: (S, d, slot, i, q) => { S = norm(S); const day = dayOf(S, d); const it = day.plan && day.plan.meals[slot][i]; if (it && q > 0) it.qty = Math.round(q * 100) / 100; return { S, v: home(S, d) }; },
   addFood: (S, d, slot, id, qty, done) => { S = norm(S); const day = dayOf(S, d); if (!day.plan) day.plan = { meals: { b: [], l: [], d: [], s: [] } };
@@ -128,14 +164,19 @@ const api = {
     for (const [d, day] of Object.entries(S.days)) { if (!day || !day.plan) continue; const it = planItems(day.plan), dn = it.filter((x) => x.done).length;
       if (dn) { days++; items += dn; if (!first || d < first) first = d; const m = d.slice(0, 7); months[m] = (months[m] || 0) + 1; }
       if (it.length && dn === it.length) full++; }
-    return { days, full, items, first, month: months[today.slice(0, 7)] || 0, weights: S.weights.length, custom: S.custom.length, plan: S.cycle ? S.cycle.id : "steady", streak: streakOf(S, today), level: levelOf(S), w: S.weights.slice(-14) }; },
+    const m0 = today.slice(0, 7); let mCost = 0, mProt = 0, mDays = 0;
+    for (const [d, day] of Object.entries(S.days)) { if (!day || !day.plan || d.slice(0, 7) !== m0 || d > today) continue; const eaten = planItems(day.plan, true); if (!eaten.length) continue;
+      const { byId, T } = ctx(norm(JSON.parse(JSON.stringify(S))), d); const te = sumItems(eaten, (id) => byId[id]); mDays++; mCost += te.cost; if (te.p >= T.protein - 5) mProt++; }
+    return { days, full, items, first, month: months[today.slice(0, 7)] || 0, week: weekOf(S, today), monthCost: r1(mCost), monthProtein: mProt, monthAvg: mDays ? r1(mCost / mDays) : 0, weights: S.weights.length, custom: S.custom.length, plan: S.cycle ? S.cycle.id : "steady", streak: streakOf(S, today), level: levelOf(S), w: S.weights.slice(-14) }; },
   // 截图、演示用：前 6 天照排好的吃、今天吃了早饭和午饭、7 天体重（不是任何真人的数据）
   demo: (S) => { S = norm(S); const today = dateStr();
+    S.stock = { chicken_ready: 8, egg: 11, milk: 2, oats: 6, whey: 15 }; S.pantry.whey = { on: true };
     for (let i = 6; i >= 1; i--) { const d = addDays(today, -i); replan(S, d, false); const day = dayOf(S, d); for (const s of SLOTS) day.plan.meals[s].forEach((it, k) => { if ((i + k) % 6 !== 0) it.done = true; }); }
     home(S, today); const t = dayOf(S, today); for (const s of ["b", "l"]) t.plan.meals[s].forEach((it) => { it.done = true; });
     const w0 = S.profile ? S.profile.weight : 65; S.weights = [];
     for (let i = 6; i >= 0; i--) S.weights.push({ d: addDays(today, -i), kg: Math.round((w0 - i * 0.12 + (i % 2) * 0.1) * 10) / 10 });
-    if (S.profile) S.profile.weight = S.weights[S.weights.length - 1].kg; return { S }; },
+    if (S.profile) S.profile.weight = S.weights[S.weights.length - 1].kg;
+    return { S }; },
   goals: () => ({ goals: Object.entries(GOALS).map(([id, g]) => ({ id, n: g.n, d: g.d })), activity: ACTIVITY }),
 };
 // Swift 只认字符串：fn 名 + JSON 参数数组 → JSON 结果；出错回 {error}

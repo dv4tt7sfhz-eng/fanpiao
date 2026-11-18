@@ -77,7 +77,7 @@ final class AppModel {
 
     // ---------- 首页 ----------
     func refresh() async { await homeCall("home", [.raw(state), .str(day)]) }
-    func replan() async { await homeCall("replan", [.raw(state), .str(day)]); say("换了一份新的") }
+    func replan() async { await homeCall("replan", [.raw(state), .str(day)]); say(L.replanStock) }
     func toggle(_ slot: String, _ i: Int) async { await homeCall("toggle", [.raw(state), .str(day), .str(slot), .num(Double(i))]) }
     func remove(_ slot: String, _ i: Int) async { await homeCall("removeItem", [.raw(state), .str(day), .str(slot), .num(Double(i))]) }
     func setQty(_ slot: String, _ i: Int, _ q: Double) async { await homeCall("setQty", [.raw(state), .str(day), .str(slot), .num(Double(i)), .num(q)]) }
@@ -103,6 +103,28 @@ final class AppModel {
     }
 
     // ---------- 其他页 ----------
+    /// 和昨天一样
+    func copyYesterday() async {
+        guard hasProfile else { return }
+        do {
+            let r = try await engine.call("copyDay", [.raw(state), .str(day)], as: CopyResult.self)
+            adopt(r.S)
+            withAnimation(Motion.quick) { home = r.v }
+            say(r.ok ? L.copyDone : L.copyNone)
+        } catch { say(error.localizedDescription) }
+    }
+    func stock() async -> StockVM? { try? await engine.call("stock", [.raw(state)], as: StockVM.self) }
+    func stockIn(_ id: String, _ n: Double, total: Double) async {
+        if let r = try? await engine.call("stockIn", [.raw(state), .str(id), .num(n), .num(total)], as: StateOnly.self) { adopt(r.S); await refresh() }
+    }
+    func setStock(_ id: String, _ n: Double) async {
+        if let r = try? await engine.call("setStock", [.raw(state), .str(id), .num(n)], as: StateOnly.self) { adopt(r.S); await refresh() }
+    }
+    func values() async -> [ValueItem] { (try? await engine.call("values", [.raw(state)], as: [ValueItem].self)) ?? [] }
+    /// 记一杯奶茶这类不在食物库里的东西（直接记成已吃）
+    func addQuick(_ slot: String, name: String, k: Double, p: Double, f: Double, cb: Double, cost: Double) async {
+        await homeCall("addQuick", [.raw(state), .str(day), .str(slot), .str(name), .num(k), .num(p), .num(f), .num(cb), .num(cost)])
+    }
     func foods() async -> FoodsVM? { try? await engine.call("foods", [.raw(state)], as: FoodsVM.self) }
     func setOn(_ id: String, _ on: Bool) async {
         if let r = try? await engine.call("setOn", [.raw(state), .str(id), .bool(on)], as: StateOnly.self) { adopt(r.S) }

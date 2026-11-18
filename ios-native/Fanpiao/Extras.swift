@@ -3,7 +3,7 @@ import Charts
 
 // 今日页五个入口、我的页按钮弹出来的页面：饭票学堂、成就、段位、主题市场、设置、体重、通知，还有第一次打开的欢迎页。
 
-private struct SheetFrame<Content: View>: View {
+struct SheetFrame<Content: View>: View {
     let title: String
     @ViewBuilder var content: Content
     @Environment(AppModel.self) private var model

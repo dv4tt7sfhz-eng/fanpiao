@@ -184,7 +184,7 @@ struct TodayContent: View {
             Button {
                 model.route = .records
             } label: {
-                Streak(n: Int(model.stats?.streak ?? 0))
+                Streak(n: Int(model.home?.week ?? model.stats?.week ?? 0))
             }
             .buttonStyle(.plain)
             .at(345, 82)
@@ -218,10 +218,10 @@ struct TodayContent: View {
     private var shortcuts: some View {
         HStack(alignment: .bottom, spacing: 0) {
             shortcut(NI.cap(), 22, 20, L.shortcuts[0], 9, .regular, hx(0x3a2c2e), gap: 7, pb: 4, to: .school)
-            shortcut(NI.medal(), 22, 27, L.shortcuts[1], 12, .regular, hx(0xc4c4c8), gap: 6, pb: 2, to: .achievements)
+            shortcut(NI.medal(), 22, 27, L.shortcuts[1], 12, .regular, hx(0xc4c4c8), gap: 6, pb: 2, to: .stock)
             shortcut(NI.badge(), 30, 30, L.shortcuts[2], 15, .bold, .white, gap: 8, pb: 0, to: .plans)
-            shortcut(NI.trophy(), 24, 26, L.shortcuts[3], 12, .regular, hx(0xc4c4c8), gap: 6, pb: 2, to: .level)
-            shortcut(NI.layers(), 20, 20, L.shortcuts[4], 9, .regular, hx(0x3a2c2e), gap: 7, pb: 4, to: .themes)
+            shortcut(NI.trophy(), 24, 26, L.shortcuts[3], 12, .regular, hx(0xc4c4c8), gap: 6, pb: 2, to: .value)
+            shortcut(NI.layers(), 20, 20, L.shortcuts[4], 9, .regular, hx(0x3a2c2e), gap: 7, pb: 4, to: .tea)
         }
         .frame(width: 354)
         .padding(.top, 22)
@@ -241,6 +241,7 @@ struct TodayContent: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .zoomSource(route)
     }
 
     private var sectionHeader: some View {
@@ -304,6 +305,7 @@ struct TodayContent: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .zoomSource(.level)
         .padding(.top, 16)
         .padding(.horizontal, 18)
     }
@@ -318,12 +320,18 @@ struct BodyCards: View {
         let ws = model.stats?.w ?? []
         VStack(alignment: .leading, spacing: 14) {
             if let h, let p = h.profile {
+                let naOver = h.T.naMax > 0 && h.eaten.na > h.T.naMax
                 HStack(spacing: 14) {
                     DataCard(title: L.cardWeight, value: weightText(ws, p), unit: L.cardKg, sub: weightSub(ws), spark: ws.map(\.kg)) { model.route = .weight }
-                    DataCard(title: L.cardBMI, value: bmi(p).map { Fmt.one($0) } ?? "—", unit: "", sub: bmi(p).map { L.bmiLevel($0) } ?? "", spark: []) { model.route = .profile }
+                        .zoomSource(.weight)
+                    DataCard(title: L.cardSodium, value: Fmt.k(h.eaten.na), unit: L.mg,
+                             sub: naOver ? L.sodiumOver(h.eaten.na - h.T.naMax) : L.sodiumLeft(max(0, h.T.naMax - h.eaten.na)),
+                             spark: [], alert: naOver) { model.route = .dietDetail }
+                        .zoomSource(.dietDetail)
                 }
                 HStack(spacing: 14) {
-                    DataCard(title: L.cardTarget, value: Fmt.k(h.T.kcal), unit: L.kcal, sub: L.targetSub(h.T.protein), spark: []) { model.route = .dietDetail }
+                    DataCard(title: L.cardAcne, value: "—", unit: "", sub: L.acneSoon, spark: []) { model.route = .article(5) }
+                        .zoomSource(.article(5))
                     addCard
                 }
             } else {
@@ -376,6 +384,8 @@ struct DataCard: View {
     let unit: String
     let sub: String
     let spark: [Double]
+    /// 超标：数字和小字变红
+    var alert: Bool = false
     var action: () -> Void
 
     var body: some View {
@@ -383,11 +393,11 @@ struct DataCard: View {
             VStack(alignment: .leading, spacing: 0) {
                 T(title, 12, .regular, hx(0x8a8a8e))
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    T(value, 26, .black, hx(0xf2eded)).monospacedDigit()
+                    T(value, 26, .black, alert ? hx(0xff4d58) : hx(0xf2eded)).monospacedDigit()
                     T(unit, 11, .bold, hx(0x8a8a8e))
                 }
                 .padding(.top, 6)
-                T(sub, 11, .regular, hx(0x6a6a6e)).lineLimit(1).padding(.top, 2)
+                T(sub, 11, alert ? .bold : .regular, alert ? hx(0xff4d58) : hx(0x6a6a6e)).lineLimit(1).padding(.top, 2)
                 Spacer(minLength: 0)
                 if spark.count >= 2 { Spark(vals: spark).frame(height: 18) }
             }
@@ -576,7 +586,7 @@ struct HeroCard: View {
         let items = h.meals.flatMap(\.items)
         guard !items.isEmpty else { return (L.cardTitle, L.cardSub1, L.cardSub2) }
         let done = items.filter(\.done).count
-        return (h.planName, L.cardSubA(items.count, h.planned.kcal), L.cardSubB(done, items.count, h.planned.cost))
+        return (h.planName, L.cardSubA(items.count, h.planned.kcal, done), L.cardSubB(h.planned.cost, h.planned.p))
     }
 
     // 卡片顶部：排餐/饮食切换、餐具、编辑
@@ -696,7 +706,7 @@ struct HeroCard: View {
                     .init(color: rgba(196, 48, 58, 0.8), location: 1)
                 ], startPoint: .leading, endPoint: .trailing))
                 .opacity(dP)
-                T(L.cardBtn, 15 + 2 * dP, .heavy, mix([255, 107, 115], [255, 90, 100], dP))
+                T(g.P > 0.6 ? L.ctaSheet : L.cardBtn, 15 + 2 * dP, .heavy, mix([255, 107, 115], [255, 90, 100], dP))
                     .lineLimit(1).fixedSize()
                     .frame(height: bh)
                     .at(16 + 5 * dP, 0)
@@ -732,6 +742,7 @@ struct DietGroup: View {
         let eaten = h?.eaten.kcal ?? 0
         let pct = target > 0 ? min(1, eaten / target) : 0
         let mealsN = h?.meals.filter { $0.items.contains(where: \.done) }.count ?? 0
+        let over = h != nil && target > 0 && eaten > target
         return ZStack(alignment: .topLeading) {
             ZStack {
                 RadialGradient(colors: [Color.white.opacity(0.05), Color.white.opacity(0)], center: .top, startRadius: 0, endRadius: 175)
@@ -745,8 +756,13 @@ struct DietGroup: View {
             .at(-292, 308.5)
 
             HStack(alignment: .firstTextBaseline, spacing: 5) {
-                T(cp > 0.5 ? L.dietLeft : L.dietGoal, 10.5, .regular, hx(0xb8acac))
-                T(h == nil ? L.dietGoalKcal : Fmt.k(cp > 0.5 ? max(0, target - eaten) : target), 17, .heavy, hx(0xf2e6e6))
+                if over {
+                    T(L.over, 10.5, .bold, hx(0xff4d58))
+                    T(Fmt.k(eaten - target), 17, .heavy, hx(0xff4d58))
+                } else {
+                    T(cp > 0.5 ? L.dietLeft : L.dietGoal, 10.5, .regular, hx(0xb8acac))
+                    T(h == nil ? L.dietGoalKcal : Fmt.k(cp > 0.5 ? max(0, target - eaten) : target), 17, .heavy, hx(0xf2e6e6))
+                }
                 T(L.kcal, 10.5, .regular, hx(0xb8acac))
             }
             .frame(width: 390)
@@ -779,7 +795,7 @@ struct DietGroup: View {
                     }
                 }
                 .at(19.4, 189)
-            T(h == nil ? L.dietPct : "\(Int((pct * 100).rounded()))%", 17.5, .heavy, .white).at(342, 196)
+            T(h == nil ? L.dietPct : "\(Int(((target > 0 ? eaten / target : 0) * 100).rounded()))%", 17.5, .heavy, over ? hx(0xff4d58) : .white).at(342, 196)
 
             macro(0, x: 25, barX: 55, bar: hx(0x3c4a1e), v: h?.eaten.p)
             Rectangle().fill(Color.white.opacity(0.16)).frame(width: 1, height: 27).at(128, 257)
@@ -834,9 +850,11 @@ struct SheetContent: View {
                 .at(64, 72)
 
             Button {
-                model.route = .addFood(Route.guessSlot(), false)
+                Task { await model.copyYesterday() }
             } label: {
-                RoundIcon(size: 33, bg: hx(0x221d1e)) { NI.pencil(hx(0xe8e0e0), 2.2).frame(width: 14, height: 14) }
+                RoundIcon(size: 33, bg: hx(0x3a1215)) {
+                    Image(systemName: "square.on.square").font(.system(size: 13, weight: .bold)).foregroundStyle(hx(0xff8a90))
+                }
             }
             .buttonStyle(.plain)
             .at(300, 119)
@@ -984,7 +1002,7 @@ struct MealBlock: View {
                 .frame(width: 30, height: 30)
                 VStack(alignment: .leading, spacing: 2) {
                     T(meal.name, 15, .heavy, hx(0xf2eded))
-                    T(L.mealSum(meal.sum.kcal, meal.sum.p), 11, .regular, hx(0x8a8a8e))
+                    T(L.mealSum(meal.sum.kcal, meal.sum.p, meal.sum.cost), 11, .regular, hx(0x8a8a8e))
                 }
                 Spacer(minLength: 0)
                 if !meal.mode.isEmpty { modeMenu }
@@ -1056,7 +1074,15 @@ struct ItemLine: View {
                 T(item.n, 14, .semibold, item.done ? hx(0x6a6a6e) : hx(0xf2eded))
                     .strikethrough(item.done, color: hx(0x6a6a6e))
                     .lineLimit(1)
-                T(L.itemQty(item.qtyText, item.u), 10.5, .regular, hx(0x6a6a6e))
+                HStack(spacing: 6) {
+                    T(L.itemQty(item.qtyText, item.u), 10.5, .regular, hx(0x6a6a6e)).lineLimit(1)
+                    if let left = item.left {
+                        T(L.itemLeft(left), 9.5, .semibold, left <= 3 ? hx(0xff4d58) : hx(0xff8a90))
+                            .lineLimit(1).fixedSize()
+                            .padding(.horizontal, 6).frame(height: 16)
+                            .background(Capsule().fill(hx(0x2a1214)))
+                    }
+                }
             }
             Spacer(minLength: 6)
             VStack(alignment: .trailing, spacing: 2) {

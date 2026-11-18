@@ -46,7 +46,7 @@ struct PlanPage: View {
                     BrandMark()
                     Spacer(minLength: 0)
                     ProBadge()
-                    Streak(n: Int(model.stats?.streak ?? 0)).padding(.leading, 13)
+                    Streak(n: Int(model.home?.week ?? model.stats?.week ?? 0)).padding(.leading, 13)
                 }
                 .frame(height: 28)
 
@@ -55,6 +55,7 @@ struct PlanPage: View {
                 HStack(spacing: 10) {
                     tile(NI.clipboard(), 16, 20, L.planNew) { newRecipe() }
                     tile(NI.sparkles(), 18, 20, L.planPhoto) { model.route = .importAI }
+                        .zoomSource(.importAI)
                 }
                 .padding(.top, 23)
 
@@ -496,7 +497,7 @@ struct MePage: View {
 
     var body: some View {
         let st = model.stats
-        let stats = [Fmt.n(st?.days ?? 0), Fmt.n(st?.streak ?? 0), Fmt.n(st?.weights ?? 0)]
+        let stats = [Fmt.n(st?.days ?? 0), Fmt.n(st?.week ?? 0), Fmt.n(st?.weights ?? 0)]
         let badges = Lore.badges(st).filter(\.got).count
         DesignPage {
             VStack(spacing: 0) {
@@ -549,7 +550,7 @@ struct MePage: View {
                                 T(L.meMonthUnit, 12, .medium, hx(0xbdbdc2))
                             }
                             .padding(.vertical, 4)
-                            T(L.meMonthTotalN(Int(st?.days ?? 0)), 10, .regular, hx(0x8a8a8e))
+                            T(L.monthSpent(st?.monthCost ?? 0), 10, .bold, hx(0xff8a90))
                         }
                     }
                 }
@@ -570,6 +571,11 @@ struct MePage: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 12)
 
+                if let st, (st.monthAvg ?? 0) > 0 {
+                    MonthReview(st: st)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
+                }
                 if let rec, rec.days.contains(where: { $0.e.kcal > 0 }) {
                     WeekBars(days: rec.days)
                         .padding(.horizontal, 16)
@@ -634,6 +640,7 @@ struct MePage: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .zoomSource(route)
     }
 
     private var badgeStack: some View {
@@ -727,3 +734,41 @@ struct WeekBars: View {
     }
 }
 
+
+
+/// 我的动态最上面：这个月的你（只讲过程，不放体重），可以分享
+struct MonthReview: View {
+    let st: StatsVM
+    var body: some View {
+        let vals = [Fmt.n(st.monthProtein ?? 0) + " 天", "¥" + Fmt.yuan(st.monthAvg ?? 0), "—"]
+        VStack(alignment: .leading, spacing: 0) {
+            T(L.reviewTitle, 14, .heavy)
+            HStack(spacing: 0) {
+                ForEach(0..<3, id: \.self) { i in
+                    VStack(spacing: 4) {
+                        T(vals[i], 20, .black)
+                        T(L.reviewLabels[i], 11, .regular, hx(0x8a8a8e))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.top, 16)
+            HStack {
+                T(L.reviewNote, 11, .regular, hx(0x6a6a6e))
+                Spacer()
+                ShareLink(item: L.reviewText(Int(st.monthProtein ?? 0), st.monthAvg ?? 0)) {
+                    T(L.reviewShare, 12, .semibold, .white)
+                        .padding(.horizontal, 12).frame(height: 28)
+                        .background(Capsule().fill(hx(0x3a1215)))
+                        .overlay(Capsule().strokeBorder(hx(0x7a2228), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 16)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 22, style: .circular).fill(LinearGradient(colors: [hx(0x2a1214), hx(0x161213)], startPoint: .topLeading, endPoint: .bottomTrailing)))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .circular).strokeBorder(hx(0x4a1c22), lineWidth: 1))
+    }
+}
