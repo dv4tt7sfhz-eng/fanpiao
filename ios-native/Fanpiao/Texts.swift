@@ -385,4 +385,13 @@ enum L {
     static let aiBadReply = "AI 回的东西看不懂，再试一次。"
     static func aiFailed(_ code: Int) -> String { "AI 暂时用不了（\(code)），过一会儿再试。" }
     static let setAISettings = "AI 设置（拍照识别）"
+
+    // 底栏浮窗：下一顿
+    static func nextTitle(_ meal: String, _ n: Int) -> String { "\(meal) · \(n) 样" }
+    static func nextSub(_ kcal: Double, _ p: Double) -> String { "约 \(Fmt.k(kcal)) kcal · 蛋白 \(Fmt.n(p)) g" }
+    static let allDone = "今天都吃完了"
+    static func allDoneSub(_ kcal: Double, _ p: Double) -> String { "吃了 \(Fmt.k(kcal)) kcal · 蛋白 \(Fmt.n(p)) g" }
+    static func ateMeal(_ meal: String) -> String { "\(meal)打好勾了" }
+    static let noPlanYet = "还没排餐"
+    static let noPlanSub = "点一下，饭票帮你排"
 }

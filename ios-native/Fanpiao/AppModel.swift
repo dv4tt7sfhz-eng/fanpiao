@@ -95,6 +95,18 @@ final class AppModel {
         if a.eaten.kcal <= a.T.kcal && b.eaten.kcal > b.T.kcal { show(.comfort) }
         else if a.eaten.p < a.T.protein && b.eaten.p >= b.T.protein { show(.cheer) }
     }
+    /// 这一餐没打勾的全部打勾（底栏浮窗上的 ✓）
+    func eatMeal(_ slot: String) async {
+        guard let meal = home?.meals.first(where: { $0.slot == slot }) else { return }
+        let before = home
+        for it in meal.items where !it.done {
+            await homeCall("toggle", [.raw(state), .str(day), .str(slot), .num(Double(it.i))])
+        }
+        say(L.ateMeal(meal.name))
+        guard let a = before, let b = home, dayOffset == 0 else { return }
+        if a.eaten.kcal <= a.T.kcal && b.eaten.kcal > b.T.kcal { show(.comfort) }
+        else if a.eaten.p < a.T.protein && b.eaten.p >= b.T.protein { show(.cheer) }
+    }
     /// 放一个暖心小动画
     func show(_ kind: MomentKind) { moment = Moment(kind: kind) }
     func remove(_ slot: String, _ i: Int) async { await homeCall("removeItem", [.raw(state), .str(day), .str(slot), .num(Double(i))]) }

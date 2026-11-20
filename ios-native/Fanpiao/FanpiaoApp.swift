@@ -45,6 +45,7 @@ struct RootView: View {
                 MePage()
             }
         }
+        .modifier(TabChrome())
         .tint(Accent.of(model.accent).tint)
         .environment(\.designK, width / 390)
         .environment(\.zoomNS, zoom)
