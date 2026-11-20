@@ -62,7 +62,10 @@ struct SnapSheet: View {
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.9), value: phase)
         .animation(.spring(response: 0.45, dampingFraction: 0.9), value: ready)
-        .onAppear { info = model.aiInfo() }
+        .onAppear {
+            info = model.aiInfo()
+            if let f = model.focusSlot { slot = f }
+        }
         .onChange(of: photo) { _, item in
             guard let item else { return }
             Task {

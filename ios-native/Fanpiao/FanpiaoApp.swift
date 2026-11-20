@@ -38,8 +38,8 @@ struct RootView: View {
             Tab(L.tabPlan, systemImage: "dumbbell.fill", value: 1) {
                 PlanPage()
             }
-            Tab(L.tabFind, systemImage: "safari", value: 2) {
-                FindPage()
+            Tab(L.tabFind, systemImage: "square.and.pencil", value: 2) {
+                RecordPage()
             }
             Tab(L.tabMe, systemImage: "person.fill", value: 3) {
                 MePage()

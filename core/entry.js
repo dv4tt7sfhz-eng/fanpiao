@@ -2,7 +2,7 @@
 // 规则全部来自 www/js，和安卓 / 网页版完全一样。所有函数收 JSON 字符串、回 JSON 字符串。
 import { blank, allFoods, dateStr, addDays, dayOf, prune } from "../www/js/store.js";
 import { targetsOf, sumItems, planItems, SLOTS, SLOT_NAME, GOALS, ACTIVITY, saltOf } from "../www/js/nutrition.js";
-import { makePlan } from "../www/js/planner.js";
+import { makePlan, shareOf } from "../www/js/planner.js";
 import { targetsFor, dayInfo, dayLabel, KIND, PLANS, planOf, makeCycle, rhythm, goalName } from "../www/js/plans.js";
 import { FOODS, CATS } from "../www/js/foods.js";
 import { searchLib, libFood, lib } from "../www/js/lib.js";
@@ -36,8 +36,30 @@ function replan(S, d, variety) {
   }
   const stock = S.stock || {};
   const pool = enabled.map((f) => ((stock[f.id] || 0) > 0 ? { ...f, $: 0 } : f));
-  const plan = makePlan({ foods: pool, T, modes: day.modes, budget: S.prefs.budget, snack: S.prefs.snack, locked, avoid, seed: Date.now(), skip: info.skip, plate: info.plate });
+  const extra = SLOTS.flatMap((s) => locked[s]).map((it) => byId[it.id]).filter(Boolean);
+  const plan = makePlan({ foods: pool, T, modes: day.modes, budget: S.prefs.budget, snack: S.prefs.snack, locked, avoid, seed: Date.now(), skip: info.skip, plate: info.plate, extra });
   day.plan = { meals: plan.meals }; day.tip = ""; day.src = "local"; day.T = { kcal: T.kcal, protein: T.protein }; day.pv = (day.pv || 0) + 1;
+}
+// 记好一餐以后：这一餐和之前的只留真吃了的（打勾的），后面几餐按今天还差多少重新排
+function rebalance(S, d, slot) {
+  const { day, T, info, enabled, byId } = ctx(S, d);
+  if (!day.plan) replan(S, d, false);
+  const idx = SLOTS.indexOf(slot), locked = {}, skip = [...(info.skip || [])];
+  for (const [k, s] of SLOTS.entries()) {
+    const done = day.plan.meals[s].filter((it) => it.done && byId[it.id]);
+    if (k <= idx) { day.plan.meals[s] = done; skip.push(s); }
+    locked[s] = done;
+  }
+  const stock = S.stock || {};
+  const pool = enabled.map((f) => ((stock[f.id] || 0) > 0 ? { ...f, $: 0 } : f));
+  // 后面几餐按原来的比例，分今天还剩的热量
+  const base = shareOf(S.prefs.snack, info.skip || []), eatenK = sumItems(SLOTS.flatMap((s) => locked[s]), (id) => byId[id]).kcal;
+  const later = SLOTS.filter((s, k) => k > idx && !(info.skip || []).includes(s)), sumB = later.reduce((a, s) => a + (base[s] || 0), 0) || 1;
+  const left = Math.max(0, (T.kcal - eatenK) / T.kcal), shareFix = {};
+  for (const s of SLOTS) shareFix[s] = later.includes(s) ? ((base[s] || 0) / sumB) * left : 0;
+  const plan = makePlan({ foods: pool, T, modes: day.modes, budget: S.prefs.budget, snack: S.prefs.snack, locked, avoid: {}, seed: Date.now(), skip, plate: info.plate, shareFix, extra: SLOTS.flatMap((s) => locked[s]).map((it) => byId[it.id]).filter(Boolean) });
+  for (const [k, s] of SLOTS.entries()) if (k > idx) day.plan.meals[s] = plan.meals[s];
+  day.src = "rebalance"; day.pv = (day.pv || 0) + 1;
 }
 function issues(tp, T, budget) {
   const out = [], dk = tp.kcal - T.kcal, tight = budget > 0 && tp.cost >= budget * 0.93, r0 = Math.round;
@@ -108,6 +130,7 @@ const api = {
   toggle: (S, d, slot, i) => { S = norm(S); const day = dayOf(S, d); const it = day.plan && day.plan.meals[slot][i];
     if (it) { it.done = !it.done; if (S.stock[it.id] != null) S.stock[it.id] = Math.max(0, r1(S.stock[it.id] + (it.done ? -it.qty : it.qty))); }
     return { S, v: home(S, d) }; },
+  rebalance: (S, d, slot) => { S = norm(S); rebalance(S, d, slot); return { S, v: home(S, d) }; },
   // 和昨天一样：今天打过勾的不动，没打勾的换成昨天那一份
   copyDay: (S, d) => { S = norm(S); const prev = (S.days[addDays(d, -1)] || {}).plan; if (!prev || !planItems(prev).length) return { S, v: home(S, d), ok: false };
     const day = dayOf(S, d); if (!day.plan) day.plan = { meals: { b: [], l: [], d: [], s: [] } };

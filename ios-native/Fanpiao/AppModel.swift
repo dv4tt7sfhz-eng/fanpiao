@@ -107,6 +107,14 @@ final class AppModel {
         if a.eaten.kcal <= a.T.kcal && b.eaten.kcal > b.T.kcal { show(.comfort) }
         else if a.eaten.p < a.T.protein && b.eaten.p >= b.T.protein { show(.cheer) }
     }
+    /// 记好一餐：这一餐只留打勾的，后面几餐按今天还剩多少重新排
+    func rebalance(_ slot: String) async {
+        await homeCall("rebalance", [.raw(state), .str(day), .str(slot)])
+        say(L.rebalanced(slotName(slot)))
+    }
+    /// 记录页正在记哪一餐（拍照、奶茶默认记到这一餐）
+    var focusSlot: String?
+
     /// 放一个暖心小动画
     func show(_ kind: MomentKind) { moment = Moment(kind: kind) }
     func remove(_ slot: String, _ i: Int) async { await homeCall("removeItem", [.raw(state), .str(day), .str(slot), .num(Double(i))]) }

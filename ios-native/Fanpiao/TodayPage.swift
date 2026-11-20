@@ -92,6 +92,7 @@ struct TodayPage: View {
     @Environment(UIState.self) private var ui
     @Environment(\.designK) private var k
     @State private var scrollY: Double = 0
+    @State private var pos = ScrollPosition(edge: .top)
 
     var body: some View {
         let g = CardGeo(m: m, scrollY: scrollY)
@@ -108,6 +109,7 @@ struct TodayPage: View {
                 }
             }
             .scrollIndicators(.hidden)
+            .scrollPosition($pos)
             .scrollDisabled(g.sheetOn)
             .ignoresSafeArea()
             .onScrollGeometryChange(for: Double.self) { geo in
@@ -130,6 +132,11 @@ struct TodayPage: View {
         .toolbarVisibility(g.sheetOn ? .hidden : .visible, for: .tabBar)
         .task {
             if LaunchArgs.has("-fpAutoplay") { await m.autoplay() }
+            // 截图用：-fpScroll 560 直接滑到下面
+            if let y = Double(LaunchArgs.value("-fpScroll") ?? "") {
+                try? await Task.sleep(for: .milliseconds(600))
+                pos.scrollTo(y: y * Double(k))
+            }
         }
     }
 }
@@ -149,6 +156,7 @@ struct TodayContent: View {
             shortcuts
             sectionHeader
             BodyCards()
+            IntakeSection()
             rankCard
             Color.clear.frame(height: 110)
         }

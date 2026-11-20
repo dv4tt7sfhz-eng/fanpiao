@@ -10,7 +10,7 @@ enum L {
     // 底栏
     static let tabToday = "今日"
     static let tabPlan = "排餐"
-    static let tabFind = "发现"
+    static let tabFind = "记录"
     static let tabMe = "我的"
 
     // 今日页
@@ -394,4 +394,34 @@ enum L {
     static func ateMeal(_ meal: String) -> String { "\(meal)打好勾了" }
     static let noPlanYet = "还没排餐"
     static let noPlanSub = "点一下，饭票帮你排"
+
+    // ---------- 4.4 今日摄入、记录页 ----------
+    static let intakeTitle = "今日摄入"
+    static let intakeMore = "看明细"
+    static let intakeNames = ["热量", "蛋白质", "碳水", "脂肪", "钠", "膳食纤维", "花费"]
+    static let intakeUnits = ["kcal", "g", "g", "g", "mg", "g", ""]
+    static func intakeVal(_ v: Double, _ t: Double, _ unit: String, money: Bool = false) -> String {
+        money ? "¥\(Fmt.yuan(v)) / ¥\(Fmt.n(t))" : "\(Fmt.k(v)) / \(Fmt.k(t)) \(unit)"
+    }
+    static let intakeNoBudget = "不限"
+    static func intakeMeal(_ n: String, _ k: Double) -> String { "\(n) \(Fmt.k(k))" }
+
+    static func recordAsk(_ meal: String) -> String { "\(meal)吃了什么？" }
+    static let recordPlanned = "饭票给你排的"
+    static let recordPlannedSub = "吃了就点一下打勾，没吃的不用管"
+    static let recordEmpty = "这一餐还没排东西"
+    static let recordOther = "还吃了别的？"
+    static let recordLib = "从食物库选"
+    static let recordSnap = "拍照识别"
+    static let recordTea = "奶茶饮料"
+    static let recordDone = "这一餐记好了 · 调整后面的饭"
+    static let recordDoneShort = "记好了"
+    static let recordLater = "后面的饭已经跟着调好了"
+    static let recordLaterNone = "这是今天最后一餐了"
+    static let recordLeft = "今天还差"
+    static func recordLeftLine(_ k: Double, _ p: Double) -> String {
+        (k >= 0 ? "热量还差 \(Fmt.k(k)) kcal" : "热量超了 \(Fmt.k(-k)) kcal") + " · " + (p > 0 ? "蛋白还差 \(Fmt.n(p)) g" : "蛋白够了")
+    }
+    static func rebalanced(_ meal: String) -> String { "\(meal)记好了，后面的饭按今天还剩的重新排了" }
+    static let recordNotToday = "你在看的不是今天，记的会记到那一天"
 }

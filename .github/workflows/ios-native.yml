@@ -64,7 +64,7 @@ jobs:
           shot 3-sheet -fpNoSplash -fpTab 0 -fpShow sheet
           shot 3b-dietpage -fpNoSplash -fpTab 0 -fpShow diet
           shot 4-plan -fpNoSplash -fpTab 1
-          shot 5-find -fpNoSplash -fpTab 2
+          shot 5-record -fpNoSplash -fpTab 2
           shot 6-me -fpNoSplash -fpTab 3
           shot 7-foods -fpNoSplash -fpTab 0 -fpRoute foods
           shot 8-school -fpNoSplash -fpTab 0 -fpRoute school
@@ -77,6 +77,8 @@ jobs:
           shot 15-aiset -fpNoSplash -fpTab 1 -fpRoute aiset
           shot 16-comfort -fpNoSplash -fpTab 0 -fpMoment comfort
           shot 17-water -fpNoSplash -fpTab 0 -fpMoment water
+          shot 18-intake -fpNoSplash -fpTab 0 -fpScroll 560
+          shot 19-recorddone -fpNoSplash -fpTab 2 -fpSlot b -fpRecordDone
           # 录两段视频看动画：开场；排餐/饮食来回切换 + 卡片长成整页再收回
           rec() { n=$1; t=$2; shift 2; xcrun simctl terminate "$DEV" com.fanpiao.app >/dev/null 2>&1 || true; sleep 1
             xcrun simctl io "$DEV" recordVideo --codec=h264 --force "../shots/$n.mp4" & P=$!; sleep 1

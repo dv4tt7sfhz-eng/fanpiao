@@ -355,7 +355,7 @@ struct TeaSheet: View {
                     let name = L.teaName(L.teaBases[base], L.teaSizes[size], L.teaSugars[sugar])
                     let cost = Double(price.replacingOccurrences(of: ",", with: ".")) ?? 0
                     Task {
-                        await model.addQuick("s", name: name, k: kcal.rounded(), p: prot, f: fat, cb: carb, cost: cost)
+                        await model.addQuick(model.focusSlot ?? "s", name: name, k: kcal.rounded(), p: prot, f: fat, cb: carb, cost: cost)
                         model.say("\(L.teaAdd)：\(name)")
                         dismiss()
                     }
