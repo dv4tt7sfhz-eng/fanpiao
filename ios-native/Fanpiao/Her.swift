@@ -62,7 +62,7 @@ extension L {
     static let herIronAsk = "补点铁："
     static func herIron(_ v: Double, _ t: Double) -> String { "今天铁 \(Fmt.one(v)) / \(Fmt.n(t)) mg" }
     static let herAdded = "放进加餐了"
-    static let herWater = "这几天体重涨一点多半是水，别被吓到"
+    static let herWater = "涨一点多半是水，别慌"
 
     // 无数字
     static func word(_ v: Double, _ t: Double, more: Bool = true) -> String {
