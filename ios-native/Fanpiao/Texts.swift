@@ -187,7 +187,7 @@ enum L {
     static func meMonthTotalN(_ n: Int) -> String { "总计 \(n) 天" }
     static let meWeekTitle = "最近 7 天"
     static let meWeekSub = "每天吃了多少千卡，虚线是目标"
-    static let meVersion = "饭票 4.1（iPhone 原生版）· 数据只存在这台手机上"
+    static let meVersion = "饭票 4.4（iPhone 原生版）· 数据只存在这台手机上"
 
     // 第一次打开
     static let welcomeTitle = "先认识一下你"
@@ -398,8 +398,9 @@ enum L {
     // ---------- 4.4 今日摄入、记录页 ----------
     static let intakeTitle = "今日摄入"
     static let intakeMore = "看明细"
-    static let intakeNames = ["热量", "蛋白质", "碳水", "脂肪", "钠", "膳食纤维", "花费"]
-    static let intakeUnits = ["kcal", "g", "g", "g", "mg", "g", ""]
+    static let intakeNames = ["热量", "蛋白质", "碳水", "脂肪", "钠", "膳食纤维", "花费", "铁"]
+    static let intakeUnits = ["kcal", "g", "g", "g", "mg", "g", "", "mg"]
+    static let intakeFlex = "含经前 +100 弹性"
     static func intakeVal(_ v: Double, _ t: Double, _ unit: String, money: Bool = false) -> String {
         money ? "¥\(Fmt.yuan(v)) / ¥\(Fmt.n(t))" : "\(Fmt.k(v)) / \(Fmt.k(t)) \(unit)"
     }
@@ -422,6 +423,7 @@ enum L {
     static func recordLeftLine(_ k: Double, _ p: Double) -> String {
         (k >= 0 ? "热量还差 \(Fmt.k(k)) kcal" : "热量超了 \(Fmt.k(-k)) kcal") + " · " + (p > 0 ? "蛋白还差 \(Fmt.n(p)) g" : "蛋白够了")
     }
+    static func recordLeftWord(_ k: String, _ p: String) -> String { "热量\(k) · 蛋白\(p)" }
     static func rebalanced(_ meal: String) -> String { "\(meal)记好了，后面的饭按今天还剩的重新排了" }
     static let recordNotToday = "你在看的不是今天，记的会记到那一天"
 }

@@ -9,6 +9,7 @@ import { searchLib, libFood, lib } from "../www/js/lib.js";
 import { parseText, preview, FORMAT, aiPrompt } from "../www/js/aiimport.js";
 import { PROVIDERS, visionCfg, snapPrompt, sanitizeSnap, packPrompt, sanitizePack, packToItem } from "../www/js/ai.js";
 import { app } from "./ui-stub.js";
+import { IRON, herTargets, herView, herApi } from "./her.js";
 
 const MODE_S = { out: "外食", cold: "不开火", cook: "自己做" };
 const TIERS = ["黑铁", "青铜", "白银", "黄金", "铂金", "钻石", "大师"], ROMAN = ["I", "II", "III"];
@@ -22,9 +23,9 @@ function norm(raw) {
 }
 function ctx(S, d) {
   const day = dayOf(S, d);
-  const foods = allFoods(S);
+  const foods = allFoods(S).map((f) => (IRON[f.id] != null && f.fe == null ? { ...f, fe: IRON[f.id] } : f));
   const byId = Object.fromEntries(foods.map((f) => [f.id, f]));
-  return { day, foods, byId, T: targetsFor(S, d, day), info: dayInfo(S, d), enabled: foods.filter((f) => f.on) };
+  return { day, foods, byId, T: herTargets(S, d, targetsFor(S, d, day)), info: dayInfo(S, d), enabled: foods.filter((f) => f.on) };
 }
 function replan(S, d, variety) {
   const { day, T, info, enabled, byId } = ctx(S, d);
@@ -97,8 +98,8 @@ function levelOf(S) {
   const name = (i) => TIERS[Math.floor(i / 3)] + " " + ROMAN[i % 3];
   return { xp, lv, cur: left, need, name: name(lv), next: lv < TIERS.length * 3 - 1 ? name(lv + 1) : "", tier: Math.floor(lv / 3) };
 }
-const tot = (t) => ({ kcal: Math.round(t.kcal), p: r1(t.p), f: r1(t.f), cb: r1(t.cb), cost: r1(t.cost), na: Math.round(t.na), fb: r1(t.fb), veg: Math.round(t.veg) });
-const tgt = (T) => ({ kcal: T.kcal, protein: T.protein, fat: T.fat, carb: T.carb, naMax: T.naMax, fbMin: T.fbMin, goal: T.goal, kind: T.kind || null });
+const tot = (t) => ({ kcal: Math.round(t.kcal), p: r1(t.p), f: r1(t.f), cb: r1(t.cb), cost: r1(t.cost), na: Math.round(t.na), fb: r1(t.fb), veg: Math.round(t.veg), fe: r1(t.fe || 0) });
+const tgt = (T) => ({ kcal: T.kcal, protein: T.protein, fat: T.fat, carb: T.carb, naMax: T.naMax, fbMin: T.fbMin, goal: T.goal, kind: T.kind || null, flex: T.flex || 0, plus: T.plus || 0 });
 const foodOut = (f) => ({ id: f.id, n: f.n, u: f.u, c: f.c, k: f.k, p: f.p, f: f.f, cb: f.cb, price: f.$, na: f.na || 0, fb: f.fb || 0, on: !!f.on, out: !!f.out, ck: f.ck || 0, custom: !!f.custom });
 
 // 首页要的全部数字。没有今天的饭就先排一份。
@@ -117,7 +118,7 @@ function home(S, d) {
   return { date: d, T: tgt(T), planned: tot(tp), eaten: tot(te), meals, issues: issues(tp, T, S.prefs.budget), label: dayLabel(S, d), kindName: T.kind ? KIND[T.kind].n : "",
     planName: info.plan.n, planTag: info.plan.tag, week: weekOf(S, dateStr()), goalName: GOALS[T.goal].n, streak: streakOf(S, d), level: levelOf(S),
     profile: p ? { sex: p.sex, age: p.age, height: p.height, weight: p.weight, goal: p.goal } : null, budget: S.prefs.budget, accent: S.prefs.accent || "",
-    salt: r1(saltOf(tp.na)) };
+    salt: r1(saltOf(tp.na)), her: herView(S, d) };
 }
 
 const api = {
@@ -190,7 +191,7 @@ const api = {
     return api.addFood(S, d, slot, f.id, Math.round((grams / 100) * 100) / 100, done); },
   // 粘贴 AI 写的数据：先预览，确认后应用
   importPreview: (S, text) => { S = norm(S); app.S = S; const raw = parseText(text); const pv = preview(S, raw); return { rows: pv.rows, warns: pv.warns, note: pv.note || "", next: pv.next }; },
-  importApply: (S, next) => { S = norm(S); const n = norm(next); n.ai = S.ai; n.cloud = S.cloud; return { S: n }; },
+  importApply: (S, next) => { S = norm(S); const n = norm(next); n.ai = S.ai; n.cloud = S.cloud; n.her = S.her; return { S: n }; },
   setProfile: (S, prof) => { S = norm(S); const fresh = !S.profile; S.profile = { ...(S.profile || {}), ...prof }; if (fresh && !S.weights.length) S.weights = [{ d: dateStr(), kg: prof.weight }];
     const t = S.days[dateStr()]; if (t && t.plan && !planItems(t.plan, true).length) t.plan = null; return { S }; },
   setPrefs: (S, prefs) => { S = norm(S); S.prefs = { ...S.prefs, ...prefs }; const t = S.days[dateStr()]; if (t && t.plan && !planItems(t.plan, true).length) t.plan = null; return { S }; },
@@ -222,6 +223,13 @@ const api = {
     for (let i = 6; i >= 0; i--) S.weights.push({ d: addDays(today, -i), kg: Math.round((w0 - i * 0.12 + (i % 2) * 0.1) * 10) / 10 });
     if (S.profile) S.profile.weight = S.weights[S.weights.length - 1].kg;
     return { S }; },
+  herSet: (S, d, patch) => { S = norm(S); herApi.herSet(S, patch); return { S, v: home(S, d) }; },
+  periodStart: (S, d) => { S = norm(S); herApi.periodStart(S, d); return { S, v: home(S, d) }; },
+  periodEnd: (S, d) => { S = norm(S); herApi.periodEnd(S, d); return { S, v: home(S, d) }; },
+  periodDelete: (S, d, s) => { S = norm(S); herApi.periodDelete(S, s); return { S, v: home(S, d) }; },
+  setSym: (S, d, k, v) => { S = norm(S); herApi.setSym(S, d, k, v); return { S, v: home(S, d) }; },
+  herClear: (S, d) => { S = norm(S); herApi.herClear(S); return { S, v: home(S, d) }; },
+  herDemo: (S) => { S = norm(S); herApi.herDemo(S, dateStr()); return { S }; },
   goals: () => ({ goals: Object.entries(GOALS).map(([id, g]) => ({ id, n: g.n, d: g.d })), activity: ACTIVITY }),
 };
 // Swift 只认字符串：fn 名 + JSON 参数数组 → JSON 结果；出错回 {error}

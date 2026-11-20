@@ -48,13 +48,13 @@ export function targetsOf(p, day = {}) {
 }
 
 export function sumItems(items, getFood) {
-  const t = { kcal: 0, p: 0, f: 0, cb: 0, cost: 0, veg: 0, na: 0, fb: 0 };
+  const t = { kcal: 0, p: 0, f: 0, cb: 0, cost: 0, veg: 0, na: 0, fb: 0, fe: 0 };
   for (const it of items) {
     const fd = getFood(it.id);
     if (!fd) continue;
     t.kcal += fd.k * it.qty; t.p += fd.p * it.qty; t.f += fd.f * it.qty;
     t.cb += fd.cb * it.qty; t.cost += fd.$ * it.qty; t.veg += (fd.v || 0) * it.qty;
-    t.na += (fd.na || 0) * it.qty; t.fb += (fd.fb || 0) * it.qty;
+    t.na += (fd.na || 0) * it.qty; t.fb += (fd.fb || 0) * it.qty; t.fe += (fd.fe || 0) * it.qty;
   }
   return t;
 }

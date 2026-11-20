@@ -154,6 +154,7 @@ struct TodayContent: View {
                 .frame(width: 390, height: 449, alignment: .topLeading)
                 .opacity(hdrOp)
             shortcuts
+            HerCareCard()
             sectionHeader
             BodyCards()
             IntakeSection()
@@ -330,7 +331,7 @@ struct BodyCards: View {
             if let h, let p = h.profile {
                 let naOver = h.T.naMax > 0 && h.eaten.na > h.T.naMax
                 HStack(spacing: 14) {
-                    DataCard(title: L.cardWeight, value: weightText(ws, p), unit: L.cardKg, sub: weightSub(ws), spark: ws.map(\.kg)) { model.route = .weight }
+                    DataCard(title: L.cardWeight, value: weightText(ws, p), unit: L.cardKg, sub: (h.herOn && ["pre", "period"].contains(h.her?.phase ?? "")) ? L.herWater : weightSub(ws), spark: ws.map(\.kg)) { model.route = .weight }
                         .zoomSource(.weight)
                     DataCard(title: L.cardSodium, value: Fmt.k(h.eaten.na), unit: L.mg,
                              sub: naOver ? L.sodiumOver(h.eaten.na - h.T.naMax) : L.sodiumLeft(max(0, h.T.naMax - h.eaten.na)),
@@ -340,7 +341,11 @@ struct BodyCards: View {
                 HStack(spacing: 14) {
                     DataCard(title: L.cardAcne, value: "—", unit: "", sub: L.acneSoon, spark: []) { model.route = .article(5) }
                         .zoomSource(.article(5))
-                    addCard
+                    if let her = h.her, her.on {
+                        CycleCard(her: her)
+                    } else {
+                        addCard
+                    }
                 }
             } else {
                 addCard
@@ -751,7 +756,8 @@ struct DietGroup: View {
         let eaten = h?.eaten.kcal ?? 0
         let pct = target > 0 ? min(1, eaten / target) : 0
         let mealsN = h?.meals.filter { $0.items.contains(where: \.done) }.count ?? 0
-        let over = h != nil && target > 0 && eaten > target
+        let nonum = h?.nonum ?? false
+        let over = h != nil && target > 0 && eaten > (h?.kcalCap ?? target) && !nonum
         return ZStack(alignment: .topLeading) {
             ZStack {
                 RadialGradient(colors: [Color.white.opacity(0.05), Color.white.opacity(0)], center: .top, startRadius: 0, endRadius: 175)
@@ -765,22 +771,25 @@ struct DietGroup: View {
             .at(-292, 308.5)
 
             HStack(alignment: .firstTextBaseline, spacing: 5) {
-                if over {
+                if nonum {
+                    T(L.wordLeft, 10.5, .regular, hx(0xb8acac))
+                    T(L.word(eaten, target), 17, .heavy, hx(0xf2e6e6))
+                } else if over {
                     T(L.over, 10.5, .bold, hx(0xff4d58))
                     T(Fmt.k(eaten - target), 17, .heavy, hx(0xff4d58))
                 } else {
                     T(cp > 0.5 ? L.dietLeft : L.dietGoal, 10.5, .regular, hx(0xb8acac))
                     T(h == nil ? L.dietGoalKcal : Fmt.k(cp > 0.5 ? max(0, target - eaten) : target), 17, .heavy, hx(0xf2e6e6))
                 }
-                T(L.kcal, 10.5, .regular, hx(0xb8acac))
+                if !nonum { T(L.kcal, 10.5, .regular, hx(0xb8acac)) }
             }
             .frame(width: 390)
             .at(0, 322)
 
             HStack(alignment: .firstTextBaseline, spacing: 7) {
-                T(h == nil ? L.dietEaten : Fmt.k(eaten), 48, .black, .white)
+                T(h == nil ? L.dietEaten : nonum ? L.word(eaten, target) : Fmt.k(eaten), 48, .black, .white)
                     .contentTransition(.numericText(value: eaten))
-                T(L.kcal, 14.5, .bold, hx(0x9a9a9e))
+                if !nonum { T(L.kcal, 14.5, .bold, hx(0x9a9a9e)) }
             }
             .frame(height: 50)
             .at(19, 104)
@@ -805,25 +814,25 @@ struct DietGroup: View {
                     }
                 }
                 .at(19.4, 189)
-            T(h == nil ? L.dietPct : "\(Int(((target > 0 ? eaten / target : 0) * 100).rounded()))%", 17.5, .heavy, over ? hx(0xff4d58) : .white).at(342, 196)
+            T(h == nil ? L.dietPct : nonum ? "" : "\(Int(((target > 0 ? eaten / target : 0) * 100).rounded()))%", 17.5, .heavy, over ? hx(0xff4d58) : .white).at(342, 196)
 
-            macro(0, x: 25, barX: 55, bar: hx(0x3c4a1e), v: h?.eaten.p)
+            macro(0, x: 25, barX: 55, bar: hx(0x3c4a1e), v: h?.eaten.p, t: h?.T.protein, nonum: nonum)
             Rectangle().fill(Color.white.opacity(0.16)).frame(width: 1, height: 27).at(128, 257)
-            macro(1, x: 174.6, barX: 207, bar: hx(0x22482a), v: h?.eaten.cb)
+            macro(1, x: 174.6, barX: 207, bar: hx(0x22482a), v: h?.eaten.cb, t: h?.T.carb, nonum: nonum)
             Rectangle().fill(Color.white.opacity(0.16)).frame(width: 1, height: 27).at(264, 257)
-            macro(2, x: 309.4, barX: 341, bar: hx(0x3a3a1c), v: h?.eaten.f)
+            macro(2, x: 309.4, barX: 341, bar: hx(0x3a3a1c), v: h?.eaten.f, t: h?.T.fat, nonum: nonum)
         }
         .frame(width: 390, height: 844, alignment: .topLeading)
         .scaleEffect(gs, anchor: .topLeading)
         .offset(x: gtx, y: gty)
     }
 
-    private func macro(_ i: Int, x: Double, barX: Double, bar: Color, v: Double?) -> some View {
+    private func macro(_ i: Int, x: Double, barX: Double, bar: Color, v: Double?, t: Double? = nil, nonum: Bool = false) -> some View {
         // 数字变长时，小竖条跟在数字后面（没数字时和预览一样在 barX）
         ZStack(alignment: .topLeading) {
             T(L.macros[i], 11, .regular, hx(0xb3a9a9)).at(x, 251)
             HStack(alignment: .center, spacing: 0) {
-                T(v.map { Fmt.n($0) + "g" } ?? L.macroZero, 18.5, .heavy, .white)
+                T(v.map { nonum ? L.word($0, t ?? 0) : Fmt.n($0) + "g" } ?? L.macroZero, 18.5, .heavy, .white)
                     .lineLimit(1).fixedSize()
                     .frame(minWidth: barX - x - 8, alignment: .leading)
                 RoundedRectangle(cornerRadius: 2).fill(bar).frame(width: 3, height: 18).padding(.leading, 8)

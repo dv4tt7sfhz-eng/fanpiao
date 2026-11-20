@@ -40,6 +40,7 @@ final class AppModel {
         }
         let args = ProcessInfo.processInfo.arguments
         if args.contains("-fpDemo") && !hasProfile { applyDemo() }
+        if args.contains("-fpHer") { applyHerDemo(nonum: args.contains("-fpNonum")) }
         stats = try? engine.callSync("stats", [.raw(state)], as: StatsVM.self)
         if let r = LaunchArgs.value("-fpRoute") { route = Route.named(r) }
     }
@@ -112,6 +113,26 @@ final class AppModel {
         await homeCall("rebalance", [.raw(state), .str(day), .str(slot)])
         say(L.rebalanced(slotName(slot)))
     }
+    // ---------- 女生模式 ----------
+    func herSet(_ p: [String: Any]) async {
+        let json = String(data: (try? JSONSerialization.data(withJSONObject: p)) ?? Data("{}".utf8), encoding: .utf8) ?? "{}"
+        await homeCall("herSet", [.raw(state), .str(day), .raw(json)])
+    }
+    func periodStart() async {
+        await homeCall("periodStart", [.raw(state), .str(day)])
+        say(L.herStarted)
+    }
+    func periodEnd() async {
+        await homeCall("periodEnd", [.raw(state), .str(day)])
+        say(L.herEnded)
+    }
+    func periodDelete(_ s: String) async { await homeCall("periodDelete", [.raw(state), .str(day), .str(s)]) }
+    func setSym(_ k: String, _ v: Int) async { await homeCall("setSym", [.raw(state), .str(day), .str(k), .num(Double(v))]) }
+    func herClear() async {
+        await homeCall("herClear", [.raw(state), .str(day)])
+        say(L.herCleared)
+    }
+
     /// 记录页正在记哪一餐（拍照、奶茶默认记到这一餐）
     var focusSlot: String?
 
@@ -190,6 +211,10 @@ final class AppModel {
         await homeCall("addQuick", [.raw(state), .str(day), .str(slot), .str(name), .num(k), .num(p), .num(f), .num(cb), .num(cost)])
         show(.comfort)
     }
+    /// 不放暖心动画的快速记一样（女生模式里的小零食）
+    func addQuickQuiet(_ slot: String, name: String, k: Double, p: Double, f: Double, cb: Double, cost: Double) async {
+        await homeCall("addQuick", [.raw(state), .str(day), .str(slot), .str(name), .num(k), .num(p), .num(f), .num(cb), .num(cost)])
+    }
     func foods() async -> FoodsVM? { try? await engine.call("foods", [.raw(state)], as: FoodsVM.self) }
     func setOn(_ id: String, _ on: Bool) async {
         if let r = try? await engine.call("setOn", [.raw(state), .str(id), .bool(on)], as: StateOnly.self) { adopt(r.S) }
@@ -235,6 +260,15 @@ final class AppModel {
         let json = #"{"sex":"m","age":20,"height":175,"weight":65,"goal":"gain","activity":1.55}"#
         if let r = try? engine.callSync("setProfile", [.raw(state), .raw(json)], as: StateOnly.self) { adopt(r.S) }
         if let r = try? engine.callSync("demo", [.raw(state)], as: StateOnly.self) { adopt(r.S) }
+        home = nil
+    }
+    /// 截图用：一个女生的演示数据，正在经前一周
+    private func applyHerDemo(nonum: Bool) {
+        let json = #"{"sex":"f","age":19,"height":162,"weight":52,"goal":"cut","activity":1.375}"#
+        if let r = try? engine.callSync("setProfile", [.raw(state), .raw(json)], as: StateOnly.self) { adopt(r.S) }
+        if let r = try? engine.callSync("demo", [.raw(state)], as: StateOnly.self) { adopt(r.S) }
+        if let r = try? engine.callSync("herDemo", [.raw(state)], as: StateOnly.self) { adopt(r.S) }
+        if nonum, let r = try? engine.callSync("herSet", [.raw(state), .str(Self.today), .raw(#"{"nonum":true}"#)], as: StateOnly.self) { adopt(r.S) }
         home = nil
     }
 }

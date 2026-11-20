@@ -5,6 +5,8 @@ import Foundation
 struct Totals: Codable, Hashable, Sendable {
     var kcal: Double = 0, p: Double = 0, f: Double = 0, cb: Double = 0
     var cost: Double = 0, na: Double = 0, fb: Double = 0, veg: Double = 0
+    /// 铁（毫克），4.4 起才有
+    var fe: Double? = 0
 }
 
 struct Targets: Codable, Hashable, Sendable {
@@ -12,6 +14,34 @@ struct Targets: Codable, Hashable, Sendable {
     var naMax: Double, fbMin: Double
     var goal: String
     var kind: String?
+    /// 女生模式：经前一周多给的弹性（这范围内不算超标），和黄体期加了多少
+    var flex: Double?
+    var plus: Double?
+}
+
+/// 女生模式（经期数据只在这台手机上）
+struct HerVM: Codable, Hashable, Sendable {
+    struct Cycle: Codable, Hashable, Sendable, Identifiable { var s: String; var e: String; var days: Double; var id: String { s } }
+    struct Sym: Codable, Hashable, Sendable { var pain: Double?; var mood: Double?; var swell: Double? }
+    var on: Bool
+    var nonum: Bool
+    var pill: Bool
+    var logged: Bool
+    var len: Double
+    var pLen: Double
+    var day: Double
+    var phase: String
+    var next: String
+    var until: Double
+    var irregular: Bool
+    var doctor: String
+    var inPeriod: Bool
+    var open: Bool
+    var late: Double
+    var start: String
+    var cycles: [Cycle]
+    var sym: Sym?
+    var ironT: Double
 }
 
 struct MealItem: Codable, Hashable, Identifiable, Sendable {
@@ -74,6 +104,16 @@ struct HomeVM: Codable, Hashable, Sendable {
     var budget: Double
     var accent: String
     var salt: Double
+    var her: HerVM?
+}
+
+extension HomeVM {
+    /// 女生模式开着
+    var herOn: Bool { her?.on ?? false }
+    /// 无数字模式：只说「够了 / 差一点 / 多了」
+    var nonum: Bool { her?.nonum ?? false }
+    /// 热量吃到多少才算超标（经前一周有 100 kcal 弹性）
+    var kcalCap: Double { T.kcal + (T.flex ?? 0) }
 }
 
 struct StateAndHome: Decodable, Sendable { var S: String; var v: HomeVM }

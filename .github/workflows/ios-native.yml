@@ -79,6 +79,13 @@ jobs:
           shot 17-water -fpNoSplash -fpTab 0 -fpMoment water
           shot 18-intake -fpNoSplash -fpTab 0 -fpScroll 560
           shot 19-recorddone -fpNoSplash -fpTab 2 -fpSlot b -fpRecordDone
+          # 4.4 女生模式（放最后：会把演示数据换成女生的）
+          shot 20-her-today -fpNoSplash -fpTab 0 -fpHer -fpScroll 330
+          shot 21-her-body -fpNoSplash -fpTab 0 -fpScroll 640
+          shot 22-her-cycle -fpNoSplash -fpTab 0 -fpRoute cycle
+          shot 23-her-share -fpNoSplash -fpTab 3 -fpRoute share
+          shot 24-her-nonum -fpNoSplash -fpTab 0 -fpHer -fpNonum -fpMode diet
+          shot 25-her-intake -fpNoSplash -fpTab 0 -fpScroll 900
           # 录两段视频看动画：开场；排餐/饮食来回切换 + 卡片长成整页再收回
           rec() { n=$1; t=$2; shift 2; xcrun simctl terminate "$DEV" com.fanpiao.app >/dev/null 2>&1 || true; sleep 1
             xcrun simctl io "$DEV" recordVideo --codec=h264 --force "../shots/$n.mp4" & P=$!; sleep 1

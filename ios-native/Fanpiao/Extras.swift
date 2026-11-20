@@ -251,6 +251,26 @@ struct SettingsSheet: View {
             .padding(16)
             .glassCard(cornerRadius: 22)
 
+            // 4.4 女生模式
+            let her = model.home?.her
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle(isOn: Binding(get: { her?.on ?? false }, set: { v in Task { await model.herSet(["on": v]) } })) {
+                    VStack(alignment: .leading, spacing: 2) { Text(L.herOnTitle); Text(L.herOnSub).font(.caption).foregroundStyle(Palette.ink2) }
+                }
+                Toggle(isOn: Binding(get: { her?.nonum ?? false }, set: { v in Task { await model.herSet(["nonum": v]) } })) {
+                    VStack(alignment: .leading, spacing: 2) { Text(L.herNonum); Text(L.herNonumSub).font(.caption).foregroundStyle(Palette.ink2) }
+                }
+                if her?.on == true {
+                    Divider().overlay(.white.opacity(0.08))
+                    SettingRow(icon: "drop.fill", color: Color(hex: 0xff7a96), title: L.herCycleRow) { sub = .cycle }
+                        .matchedTransitionSource(id: Route.cycle.id, in: subNS)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .padding(16)
+            .glassCard(cornerRadius: 22)
+            .animation(.spring(response: 0.45, dampingFraction: 0.86), value: her?.on)
+
             VStack(spacing: 0) {
                 SettingRow(icon: "person.text.rectangle", color: accent.tint, title: L.setProfile) { sub = .profile }
                     .matchedTransitionSource(id: Route.profile.id, in: subNS)

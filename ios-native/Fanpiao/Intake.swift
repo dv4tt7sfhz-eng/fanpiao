@@ -13,15 +13,7 @@ struct IntakeSection: View {
         if let h = model.home {
             let e = h.eaten, t = h.T
             // 名字、吃了、目标、单位、颜色、多了要不要变红
-            let rows: [(Int, Double, Double, UInt32, Bool)] = [
-                (0, e.kcal, t.kcal, 0xe5404a, true),
-                (1, e.p, t.protein, 0x9ccf5a, false),
-                (2, e.cb, t.carb, 0x5ac08a, false),
-                (3, e.f, t.fat, 0xd9c45a, true),
-                (4, e.na, t.naMax, 0x6aa8ff, true),
-                (5, e.fb, t.fbMin, 0xb08aff, false),
-                (6, e.cost, h.budget, 0xff9a6a, true)
-            ]
+            let rows = intakeRows(h)
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 9) {
                     Circle().fill(hx(0xe5404a)).frame(width: 7, height: 7).shadow(color: hx(0xe5404a), radius: 4)
@@ -37,7 +29,7 @@ struct IntakeSection: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 14) {
                         ForEach(0..<rows.count, id: \.self) { i in
-                            IntakeRow(name: L.intakeNames[rows[i].0], unit: L.intakeUnits[rows[i].0], v: rows[i].1, target: rows[i].2, color: hx(rows[i].3), redOver: rows[i].4, money: rows[i].0 == 6)
+                            IntakeRow(name: L.intakeNames[rows[i].0], unit: L.intakeUnits[rows[i].0], v: rows[i].1, target: rows[i].2, color: hx(rows[i].3), redOver: rows[i].4 && !h.nonum, money: rows[i].0 == 6, nonum: h.nonum && rows[i].0 != 6, flexNote: rows[i].0 == 0 && (t.flex ?? 0) > 0)
                         }
                         Divider().overlay(Color.white.opacity(0.08))
                         HStack(spacing: 8) {
@@ -70,6 +62,22 @@ struct IntakeSection: View {
     }
 }
 
+/// 每一行：第几项、吃了、目标、颜色、多了要不要变红
+private func intakeRows(_ h: HomeVM) -> [(Int, Double, Double, UInt32, Bool)] {
+    let e = h.eaten, t = h.T
+    var rows: [(Int, Double, Double, UInt32, Bool)] = [
+        (0, e.kcal, h.kcalCap, 0xe5404a, true),
+        (1, e.p, t.protein, 0x9ccf5a, false),
+        (2, e.cb, t.carb, 0x5ac08a, false),
+        (3, e.f, t.fat, 0xd9c45a, true),
+        (4, e.na, t.naMax, 0x6aa8ff, true),
+        (5, e.fb, t.fbMin, 0xb08aff, false),
+        (6, e.cost, h.budget, 0xff9a6a, true)
+    ]
+    if h.herOn { rows.insert((7, e.fe ?? 0, h.her?.ironT ?? 18, 0xff7a96, false), at: 6) }
+    return rows
+}
+
 private struct IntakeRow: View {
     let name: String
     let unit: String
@@ -78,6 +86,8 @@ private struct IntakeRow: View {
     let color: Color
     let redOver: Bool
     let money: Bool
+    var nonum = false
+    var flexNote = false
 
     var body: some View {
         let has = target > 0
@@ -93,7 +103,8 @@ private struct IntakeRow: View {
                         .transition(.scale.combined(with: .opacity))
                 }
                 Spacer(minLength: 0)
-                T(has ? L.intakeVal(v, target, unit, money: money) : (money ? "¥\(Fmt.yuan(v)) · \(L.intakeNoBudget)" : "\(Fmt.k(v)) \(unit)"), 13, .bold, over ? red : hx(0xf2eded))
+                if flexNote { T(L.intakeFlex, 10, .semibold, hx(0xff8a90)) }
+                T(nonum ? L.word(v, target, more: unit != "mg") : has ? L.intakeVal(v, target, unit, money: money) : (money ? "¥\(Fmt.yuan(v)) · \(L.intakeNoBudget)" : "\(Fmt.k(v)) \(unit)"), 13, .bold, over ? red : hx(0xf2eded))
                     .monospacedDigit()
                     .contentTransition(.numericText(value: v))
             }
@@ -215,7 +226,7 @@ struct RecordPage: View {
                 .padding(.top, 22)
 
                 if let h {
-                    T(L.recordLeftLine(h.T.kcal - h.eaten.kcal, h.T.protein - h.eaten.p), 12.5, .semibold, h.eaten.kcal > h.T.kcal ? red : hx(0xb8b0b0))
+                    T(h.nonum ? L.recordLeftWord(L.word(h.eaten.kcal, h.T.kcal), L.word(h.eaten.p, h.T.protein)) : L.recordLeftLine(h.T.kcal - h.eaten.kcal, h.T.protein - h.eaten.p), 12.5, .semibold, h.eaten.kcal > h.kcalCap && !h.nonum ? red : hx(0xb8b0b0))
                         .contentTransition(.numericText())
                         .frame(maxWidth: .infinity)
                         .padding(.top, 12)

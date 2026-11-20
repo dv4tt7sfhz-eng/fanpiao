@@ -738,6 +738,20 @@ struct WeekBars: View {
 
 
 /// 我的动态最上面：这个月的你（只讲过程，不放体重），可以分享
+/// 打开浅色分享卡（从按钮放大出来）
+struct LightCardButton: View {
+    @Environment(AppModel.self) private var model
+    var body: some View {
+        Button { model.route = .shareCard } label: {
+            T(L.shareCardBtn, 12, .semibold, hx(0x3a2a30))
+                .padding(.horizontal, 12).frame(height: 28)
+                .background(Capsule().fill(LinearGradient(colors: [hx(0xfff1ec), hx(0xf6e2ff)], startPoint: .leading, endPoint: .trailing)))
+        }
+        .buttonStyle(PressScale())
+        .zoomSource(.shareCard)
+    }
+}
+
 struct MonthReview: View {
     let st: StatsVM
     var body: some View {
@@ -757,6 +771,7 @@ struct MonthReview: View {
             HStack {
                 T(L.reviewNote, 11, .regular, hx(0x6a6a6e))
                 Spacer()
+                LightCardButton()
                 ShareLink(item: L.reviewText(Int(st.monthProtein ?? 0), st.monthAvg ?? 0)) {
                     T(L.reviewShare, 12, .semibold, .white)
                         .padding(.horizontal, 12).frame(height: 28)

@@ -503,6 +503,8 @@ struct ProfileForm: View {
     @State private var weight = ""
     @State private var goal = "gain"
     @State private var activity = 1.375
+    @State private var herOn = false
+    @State private var nonum = false
 
     var body: some View {
         let g = model.goals()
@@ -526,6 +528,17 @@ struct ProfileForm: View {
                     }
                     .pickerStyle(.inline).labelsHidden()
                 }
+                // 建档最后一步：两个开关，不强推，以后在设置里也能改
+                Section {
+                    if sex == "f" {
+                        Toggle(isOn: $herOn) {
+                            VStack(alignment: .leading, spacing: 2) { Text(L.herOnTitle); Text(L.herOnSub).font(.caption).foregroundStyle(Palette.ink2) }
+                        }
+                    }
+                    Toggle(isOn: $nonum) {
+                        VStack(alignment: .leading, spacing: 2) { Text(L.herNonum); Text(L.herNonumSub).font(.caption).foregroundStyle(Palette.ink2) }
+                    }
+                } header: { Text("可以不开，以后在设置里也能改") }
             }
             .scrollContentBackground(.hidden)
             .background(Backdrop(accent: Accent.of(model.accent)))
@@ -538,6 +551,7 @@ struct ProfileForm: View {
             }
             .onAppear {
                 if let p = model.home?.profile {
+                    herOn = model.home?.her?.on ?? false; nonum = model.home?.her?.nonum ?? false
                     sex = p.sex ?? "m"; goal = p.goal ?? "gain"
                     age = p.age.map { Fmt.n($0) } ?? ""; height = p.height.map { Fmt.one($0) } ?? ""; weight = p.weight.map { Fmt.one($0) } ?? ""
                 }
@@ -551,6 +565,7 @@ struct ProfileForm: View {
         guard let w = num(weight), w >= 30, w <= 250 else { return model.say("体重请填 30–250 kg") }
         Task {
             await model.setProfile(["sex": sex, "age": a, "height": h, "weight": w, "goal": goal, "activity": activity])
+            await model.herSet(["on": sex == "f" && herOn, "nonum": nonum])
             dismiss()
         }
     }
