@@ -675,23 +675,37 @@ struct HeroCard: View {
         let subSize = 11.5 + 0.5 * tp
         let dashSize = 30 + 5 * tp
         let tx = cardTexts
+        // 整页里往上滑：大标题缩小飞进顶栏（返回键右边），两行说明和虚线圈跟着列表滑走、淡出
+        let c = m.collapse
+        let o = m.sheet ? m.sheetScroll : 0
+        let fade = max(0, 1 - o / 70)
+        let tx0 = (35 - 17 * tp) * K, ty0 = g.s("tY") * K
+        let tx1 = g.cL + 64, ty1 = g.cT + 63
         return ZStack(alignment: .topLeading) {
             T(tx.0, 33, .black, mix([28, 7, 9], [236, 220, 220], tc))
                 .lineLimit(1).fixedSize()
                 .frame(height: 40)
-                .at((35 - 17 * tp) * K, g.s("tY") * K)
+                .scaleEffect(1 - 0.52 * c, anchor: .topLeading)
+                .at(tx0 + (tx1 - tx0) * c, ty0 + (ty1 - ty0) * c)
+                .allowsHitTesting(false)
             T(tx.1, subSize, .regular, subColor)
                 .lineLimit(1).fixedSize()
                 .frame(height: 21)
-                .at(34 - 16.5 * tp, 326 - 109.5 * tp)
+                .at(34 - 16.5 * tp, 326 - 109.5 * tp - o)
+                .opacity(fade)
+                .allowsHitTesting(false)
             T(tx.2, subSize, .regular, subColor)
                 .lineLimit(1).fixedSize()
                 .frame(height: 21)
-                .at(34 - 16.5 * tp, 347 - 98.5 * tp)
+                .at(34 - 16.5 * tp, 347 - 98.5 * tp - o)
+                .opacity(fade)
+                .allowsHitTesting(false)
             Circle()
                 .strokeBorder(mix([106, 32, 38], [74, 74, 78], tc), style: StrokeStyle(lineWidth: 1.2, dash: [3.6, 2.4]))
                 .frame(width: dashSize, height: dashSize)
-                .at(32 - 14.5 * tp, 367 - 92.5 * tp)
+                .at(32 - 14.5 * tp, 367 - 92.5 * tp - o)
+                .opacity(fade)
+                .allowsHitTesting(false)
             ctaButton
         }
         .frame(width: 390, height: 844, alignment: .topLeading)
@@ -700,7 +714,11 @@ struct HeroCard: View {
     private var ctaButton: some View {
         let bh = g.bh
         let bd = g.bd
-        let w = max(bh, g.bRight - g.bLeft)
+        // 整页里往下滑时缩成右边一个小圆（只留箭头），往回滑再展开
+        let mp: Double = (m.sheet && m.anim == nil && m.ctaMini) ? 1 : 0
+        let full = max(bh, g.bRight - g.bLeft)
+        let w = full - (full - bh) * mp
+        let left = g.bLeft + (full - w)
         let dP = g.dP
         let pad = g.pad
         let arrow = 15 + 5 * dP
@@ -724,6 +742,7 @@ struct HeroCard: View {
                     .lineLimit(1).fixedSize()
                     .frame(height: bh)
                     .at(16 + 5 * dP, 0)
+                    .opacity(1 - mp)
                 Circle().fill(hx(0xe8434c))
                     .frame(width: bd, height: bd)
                     .shadow(color: rgba(255, 60, 70, 0.55 * dP), radius: 6 * dP)
@@ -737,7 +756,7 @@ struct HeroCard: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .at(g.bLeft, g.bcy - bh / 2)
+        .at(left, g.bcy - bh / 2)
     }
 }
 
@@ -848,8 +867,10 @@ struct DietGroup: View {
 struct SheetContent: View {
     let onClose: () -> Void
     @Environment(AppModel.self) private var model
+    @Environment(TodayMotion.self) private var m
 
     var body: some View {
+        let c = m.collapse
         let off = model.dayOffset
         let start = min(0, off)
         let sel = off - start
@@ -866,8 +887,14 @@ struct SheetContent: View {
             T(week.dateText, 13.5, .regular, hx(0xd6cfcf), track: 0.3)
                 .lineLimit(1).fixedSize()
                 .frame(height: 19)
-                .at(64, 72)
+                .scaleEffect(1 - 0.24 * c, anchor: .topLeading)
+                .at(64, 72 + 14 * c)
 
+            // 星期条、餐食板块、三餐都在一个列表里滚：往上滑时上面的大标题收进顶栏，列表占满屏幕
+            MealList(start: start, sel: sel, week: week, blocks: blocks)
+                .at(0, 108)
+
+            // 复制昨天、换食谱：收起后跟大标题一起挪进顶栏（画在列表上面，免得被列表挡住）
             Button {
                 Task { await model.copyYesterday() }
             } label: {
@@ -876,32 +903,128 @@ struct SheetContent: View {
                 }
             }
             .buttonStyle(.plain)
-            .at(300, 119)
+            .at(300, 119 - 54 * c)
             Button {
                 model.route = .plans
             } label: {
                 RoundIcon(size: 33, bg: hx(0x221d1e)) { NI.calendar().frame(width: 14, height: 14) }
             }
             .buttonStyle(.plain)
-            .at(340, 119)
+            .at(340, 119 - 54 * c)
+        }
+        .frame(width: 390, height: 844, alignment: .topLeading)
+    }
+}
 
+/// 整页里能滚的部分：星期条、「餐食板块」标题、早餐午餐晚餐加餐。
+/// 顶上留出大标题那块的空；往上滑时大标题收进顶栏，底部大按钮缩成小圆。
+struct MealList: View {
+    let start: Int
+    let sel: Int
+    let week: WeekStrip
+    let blocks: Int
+    @Environment(AppModel.self) private var model
+    @Environment(TodayMotion.self) private var m
+    @State private var pos = ScrollPosition(edge: .top)
+    @State private var acc: Double = 0
+
+    var body: some View {
+        ScrollView(.vertical) {
+            VStack(spacing: 0) {
+                // 大标题、两行说明、虚线圈在这块空里（它们画在卡片那一层，跟着滑动收起）
+                Color.clear.frame(height: 208)
+                weekAndHeader
+                if let h = model.home, blocks > 0 {
+                    VStack(spacing: 10) {
+                        ForEach(h.issues, id: \.self) { t in IssueLine(text: t) }
+                        ForEach(h.meals) { meal in MealBlock(meal: meal) }
+                        T(L.sheetFootnote, 10, .regular, hx(0x5a5a5e))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.top, 2)
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 4)
+                    .padding(.bottom, 140)
+                } else {
+                    VStack(spacing: 0) {
+                        NI.arrowDown().frame(width: 14, height: 16)
+                        T(L.sheetEmpty, 14, .heavy, hx(0xececec)).padding(.top, 9)
+                        T(L.sheetEmptySub, 10, .regular, hx(0x6a6a6e)).padding(.top, 8)
+                    }
+                    .frame(width: 390)
+                    .padding(.top, 42)
+                    .padding(.bottom, 300)
+                }
+            }
+            .frame(width: 390)
+        }
+        .scrollIndicators(.hidden)
+        .scrollPosition($pos)
+        .onScrollGeometryChange(for: Double.self) { geo in
+            Double(geo.contentOffset.y + geo.contentInsets.top)
+        } action: { old, y in
+            m.sheetScroll = max(0, y)
+            // 往下滑一段就把底部大按钮缩成小圆；往回滑、或回到顶上就展开
+            let d = y - old
+            acc = (d >= 0) == (acc >= 0) ? acc + d : d
+            let spring = Animation.spring(response: 0.38, dampingFraction: 0.82)
+            if y < 40 {
+                if m.ctaMini { withAnimation(spring) { m.ctaMini = false } }
+            } else if acc > 24, !m.ctaMini {
+                withAnimation(spring) { m.ctaMini = true }
+            } else if acc < -24, m.ctaMini {
+                withAnimation(spring) { m.ctaMini = false }
+            }
+        }
+        .onChange(of: m.scrollTopTick) {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.92)) { pos.scrollTo(edge: .top) }
+        }
+        .task {
+            // 截图、录屏用：-fpSheetScroll 300 直接滑下去；-fpSheetDemo 慢慢滑下去再滑回来
+            if let y = Double(LaunchArgs.value("-fpSheetScroll") ?? "") {
+                try? await Task.sleep(for: .milliseconds(900))
+                withAnimation(.easeInOut(duration: 0.6)) { pos.scrollTo(y: y) }
+            }
+            if LaunchArgs.has("-fpSheetDemo") {
+                try? await Task.sleep(for: .milliseconds(1500))
+                withAnimation(.easeInOut(duration: 1.6)) { pos.scrollTo(y: 420) }
+                try? await Task.sleep(for: .milliseconds(2600))
+                withAnimation(.easeInOut(duration: 1.2)) { pos.scrollTo(y: 160) }
+                try? await Task.sleep(for: .milliseconds(2000))
+                withAnimation(.easeInOut(duration: 1.0)) { pos.scrollTo(edge: .top) }
+            }
+        }
+        .frame(width: 390, height: 736)
+        .mask(
+            LinearGradient(stops: [
+                .init(color: .clear, location: 0),
+                .init(color: .black, location: 0.025),
+                .init(color: .black, location: 0.88),
+                .init(color: .clear, location: 1)
+            ], startPoint: .top, endPoint: .bottom)
+        )
+    }
+
+    /// 星期条 + 「餐食板块 4」和「创建板块」（位置和原来一样，只是放进了列表里）
+    private var weekAndHeader: some View {
+        ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 18, style: .circular).fill(hx(0x1e191a))
                 .frame(width: 35, height: 58)
-                .at(24 + 51 * Double(sel), 316)
+                .at(24 + 51 * Double(sel), 0)
 
             HStack(spacing: 0) {
                 ForEach(0..<7, id: \.self) { i in
                     T(week.labels[i], 9, .regular, start + i == 0 ? hx(0xe8e0e0) : hx(0x6a6a6e)).frame(width: 51, height: 12)
                 }
             }
-            .at(16, 322)
+            .at(16, 6)
 
             ZStack {
                 Circle().fill(hx(0x3a1215))
                 Circle().strokeBorder(hx(0xe5404a), lineWidth: 1.5)
             }
             .frame(width: 25, height: 25)
-            .at(29 + 51 * Double(sel), 341)
+            .at(29 + 51 * Double(sel), 25)
 
             HStack(spacing: 0) {
                 ForEach(0..<7, id: \.self) { i in
@@ -909,7 +1032,7 @@ struct SheetContent: View {
                         .frame(width: 51, height: 18)
                 }
             }
-            .at(16, 345)
+            .at(16, 29)
 
             // 点一天换到那一天
             HStack(spacing: 0) {
@@ -922,13 +1045,13 @@ struct SheetContent: View {
                     .buttonStyle(.plain)
                 }
             }
-            .at(16, 316)
+            .at(16, 0)
 
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 T(L.sheetBlock, 15, .heavy, hx(0xf2eded))
                 T(model.home == nil ? L.sheetBlockCount : String(blocks), 12, .regular, hx(0x6a6a6e))
             }
-            .at(17, 393)
+            .at(17, 77)
 
             Button {
                 model.route = .addFood(Route.guessSlot(), false)
@@ -942,51 +1065,9 @@ struct SheetContent: View {
                 .overlay(Capsule().strokeBorder(hx(0x7a2228), lineWidth: 1))
             }
             .buttonStyle(.plain)
-            .at(287, 391)
-
-            if let h = model.home, blocks > 0 {
-                MealList(h: h)
-                    .at(0, 428)
-            } else {
-                VStack(spacing: 0) {
-                    NI.arrowDown().frame(width: 14, height: 16)
-                    T(L.sheetEmpty, 14, .heavy, hx(0xececec)).padding(.top, 9)
-                    T(L.sheetEmptySub, 10, .regular, hx(0x6a6a6e)).padding(.top, 8)
-                }
-                .frame(width: 390)
-                .at(0, 470)
-            }
+            .at(287, 75)
         }
-        .frame(width: 390, height: 844, alignment: .topLeading)
-    }
-}
-
-/// 整页里的餐食板块：早餐、午餐、晚餐、加餐，每样能打勾
-struct MealList: View {
-    let h: HomeVM
-
-    var body: some View {
-        ScrollView(.vertical) {
-            VStack(spacing: 10) {
-                ForEach(h.issues, id: \.self) { t in IssueLine(text: t) }
-                ForEach(h.meals) { meal in MealBlock(meal: meal) }
-                T(L.sheetFootnote, 10, .regular, hx(0x5a5a5e))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 2)
-            }
-            .padding(.horizontal, 18)
-            .padding(.top, 4)
-            .padding(.bottom, 40)
-        }
-        .scrollIndicators(.hidden)
-        .frame(width: 390, height: 300)
-        .mask(
-            LinearGradient(stops: [
-                .init(color: .black, location: 0),
-                .init(color: .black, location: 0.86),
-                .init(color: .clear, location: 1)
-            ], startPoint: .top, endPoint: .bottom)
-        )
+        .frame(width: 390, height: 112, alignment: .topLeading)
     }
 }
 

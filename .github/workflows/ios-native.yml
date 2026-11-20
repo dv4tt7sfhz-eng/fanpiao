@@ -63,6 +63,7 @@ jobs:
           shot 2-diet -fpNoSplash -fpTab 0 -fpMode diet
           shot 3-sheet -fpNoSplash -fpTab 0 -fpShow sheet
           shot 3b-dietpage -fpNoSplash -fpTab 0 -fpShow diet
+          shot 3c-sheet-scrolled -fpNoSplash -fpTab 0 -fpShow sheet -fpSheetScroll 300
           shot 4-plan -fpNoSplash -fpTab 1
           shot 5-record -fpNoSplash -fpTab 2
           shot 6-me -fpNoSplash -fpTab 3
@@ -94,6 +95,7 @@ jobs:
           rec v-auto 14 -fpNoSplash -fpAutoplay
           rec v-zoom 15 -fpNoSplash -fpZoomDemo
           rec v-moment 11 -fpNoSplash -fpMoment cheer
+          rec v-sheet 10 -fpNoSplash -fpShow sheet -fpSheetDemo
           sleep 3
           xcrun simctl spawn "$DEV" log show --last 2m --style compact --predicate 'process == "Fanpiao"' 2>/dev/null | grep -iE "fatal|crash|error|exception|precondition" | tail -40 > ../shots/applog.txt || true
           cp ~/Library/Logs/DiagnosticReports/Fanpiao* ../shots/ 2>/dev/null || true

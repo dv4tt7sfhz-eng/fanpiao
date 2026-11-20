@@ -74,6 +74,16 @@ final class TodayMotion {
     /// 饮食整页开着
     var dsheet = LaunchArgs.value("-fpShow") == "diet"
 
+    // 4.4.3：整页里往上滑时，上面那一大块（大标题、说明、星期条）跟着收起，列表占满屏幕
+    /// 列表往上滑了多少（设计点）
+    var sheetScroll: Double = 0
+    /// 往下滑时底部大按钮缩成一个小圆，往回滑再展开（学 Apple Music 的底栏）
+    var ctaMini = false
+    /// 关整页前先让列表滚回顶上
+    var scrollTopTick = 0
+    /// 大标题收进顶栏的进度：0 = 原样，1 = 收好
+    var collapse: Double { sheet ? min(1, max(0, sheetScroll / 120)) : 0 }
+
     @ObservationIgnored private var link: CADisplayLink?
     @ObservationIgnored private var proxy: LinkProxy?
     @ObservationIgnored private var stepFn: ((Double) -> Bool)?
@@ -177,7 +187,20 @@ final class TodayMotion {
     func showTrain() { if mode != .train && stepFn == nil { runSwitch("train", 0, true) } }
     func showDiet() { if mode != .diet && stepFn == nil && !sheet { runSwitch("diet", 0, true) } }
     func openSheet() { if mode == .train && !sheet && stepFn == nil { startAnim("open") } }
-    func closeSheet() { if sheet && stepFn == nil { startAnim("close") } }
+    func closeSheet() {
+        guard sheet && stepFn == nil else { return }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) { ctaMini = false }
+        // 列表滑下去了：先滚回顶上（大标题跟着展开），再播关整页的动画
+        if sheetScroll > 2 {
+            scrollTopTick += 1
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(340))
+                if self.sheet && self.stepFn == nil { self.startAnim("close") }
+            }
+        } else {
+            startAnim("close")
+        }
+    }
     func closeDiet() { if dsheet && stepFn == nil { startAnim("dclose") } }
     func tapCard() {
         guard !sheet, !dsheet, stepFn == nil else { return }
